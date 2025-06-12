@@ -42,11 +42,12 @@ HostelDrop/
 
 ```bash
 git clone https://github.com/aayushxtech/hostel-drop.git
+cd HostelDrop
 ```
 
 ### 2. Frontend Setup
 
-```bash
+```bash 
 # Navigate to frontend directory
 cd frontend
 
@@ -56,6 +57,10 @@ npm install
 yarn install
 # or
 pnpm install
+
+# Create environment file
+cp .env.example .env.local
+# or create .env.local manually and add required variables
 
 # Start development server
 npm run dev
@@ -85,6 +90,10 @@ source venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 
+# Create environment file
+cp .env.example .env
+# or create .env manually and add required variables
+
 # Run migrations
 python manage.py makemigrations
 python manage.py migrate
@@ -102,10 +111,20 @@ The backend API will be available at [http://localhost:8000](http://localhost:80
 
 ### Environment Variables
 
+#### Frontend (.env.local)
+Create a `.env.local` file in the frontend directory:
+```env
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+```
+
 #### Backend (.env)
+Create a `.env` file in the backend directory:
 ```env
 DATABASE_URL=
 SECRET_KEY=
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
 ```
 
 The project is currently configured with a Neon PostgreSQL database. Update the `DATABASE_URL` in [`backend/.env`](backend/.env) with your database credentials.
@@ -127,11 +146,13 @@ Component configuration can be found in [`frontend/components.json`](frontend/co
 - [`app/layout.tsx`](frontend/app/layout.tsx) - Root layout with fonts
 - [`app/globals.css`](frontend/app/globals.css) - Global styles and theme
 - [`lib/utils.ts`](frontend/lib/utils.ts) - Utility functions (cn helper)
+- [`.env.local`](frontend/.env.local) - Frontend environment variables
 
 ### Backend
 - [`backend/settings.py`](backend/backend/settings.py) - Django configuration
 - [`backend/urls.py`](backend/backend/urls.py) - URL routing
 - [`manage.py`](backend/manage.py) - Django management commands
+- [`.env`](backend/.env) - Backend environment variables
 
 ## 🔄 Development Workflow
 
@@ -156,12 +177,20 @@ python manage.py test         # Run tests
 
 The backend is configured to allow requests from `http://localhost:3000` (frontend). Update [`CORS_ALLOWED_ORIGINS`](backend/backend/settings.py) for production deployment.
 
+## 📋 Important Notes
+
+> ⚠️ **Environment Files**: 
+> - Never commit `.env` or `.env.local` files to version control
+> - Always create these files locally after cloning the repository
+> - Use `.env.example` files as templates if available
+
+> ⚠️ **CORS Configuration**: The CORS allowed origins are pre-configured for development. Please do not modify the `CORS_ALLOWED_ORIGINS` setting without proper authorization.
 
 ### Common Issues
 
 1. **Port conflicts**: Ensure ports 3000 (frontend) and 8000 (backend) are available
 2. **Database connection**: Verify PostgreSQL credentials in `.env`
-3. **CORS errors**: Check `CORS_ALLOWED_ORIGINS` in Django settings 
-4. **Node.js version**: Use Node.js 18+ for frontend compatibility
-
-> **Note**: The CORS allowed origins are pre-configured for development. Please do not modify the `CORS_ALLOWED_ORIGINS` setting without proper authorization.
+3. **Missing environment files**: Create `.env.local` (frontend) and `.env` (backend) files
+4. **CORS errors**: Check `CORS_ALLOWED_ORIGINS` in Django settings 
+5. **Node.js version**: Use Node.js 18+ for frontend compatibility
+6. **Environment variables not loading**: Restart development servers after updating environment files

@@ -156,20 +156,6 @@ python manage.py test         # Run tests
 
 The backend is configured to allow requests from `http://localhost:3000` (frontend). Update [`CORS_ALLOWED_ORIGINS`](backend/backend/settings.py) for production deployment.
 
-## 🚀 Deployment
-
-### Frontend (Vercel - Recommended)
-1. Push to GitHub
-2. Connect repository to Vercel
-3. Deploy automatically
-
-### Backend (Railway/Heroku/DigitalOcean)
-1. Update `ALLOWED_HOSTS` in settings
-2. Set environment variables
-3. Configure static files
-4. Deploy with your preferred platform
-
-## 🆘 Troubleshooting
 
 ### Common Issues
 

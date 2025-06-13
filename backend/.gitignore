@@ -8,3 +8,7 @@ __pycache__/
 *.pyc
 # database files
 *.sqlite3
+# cpython ignore files
+*.py[cod]
+__pycache__/
+*.so

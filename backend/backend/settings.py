@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'students',  # Your app for student management
+    'parcels',   # Your app for parcel management
 ]
 
 MIDDLEWARE = [

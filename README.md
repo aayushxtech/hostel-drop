@@ -42,7 +42,7 @@ HostelDrop/
 
 ```bash
 git clone https://github.com/aayushxtech/hostel-drop.git
-cd HostelDrop
+cd hostel-drop
 ```
 
 ### 2. Frontend Setup

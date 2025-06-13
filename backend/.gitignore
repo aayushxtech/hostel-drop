@@ -2,3 +2,9 @@ venv/
 # Environment variables
 .env
 .env.*
+# Python cache files
+__pycache__/
+# Python bytecode files
+*.pyc
+# database files
+*.sqlite3

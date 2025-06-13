@@ -1,49 +1,26 @@
 from django.db import models
 from students.models import Student
-from django.utils import timezone
 
 
 class Parcel(models.Model):
     class ParcelStatus(models.TextChoices):
-        PENDING = "Pending"
-        DELIVERED = "Delivered"
-        PICKED_UP = "Picked Up"
-
-    id = models.AutoField(primary_key=True)
+        PENDING = 'PENDING', 'Pending'
+        PICKED_UP = 'PICKED_UP', 'Picked Up'
 
     student = models.ForeignKey(
-        Student,
-        to_field='id',
-        on_delete=models.CASCADE,
-        related_name='parcels'
-    )
-
-    description = models.TextField()  # e.g. "Amazon box", "Food package"
-    service = models.CharField(max_length=100)  # e.g. BlueDart, DTDC
-
+        Student, on_delete=models.CASCADE, related_name='parcels')
+    description = models.TextField(blank=True, null=True)
+    service = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(
         max_length=20,
         choices=ParcelStatus.choices,
         default=ParcelStatus.PENDING
     )
-
-    pickup_code = models.CharField(max_length=6, blank=True, null=True)
-    is_verified = models.BooleanField(default=False)
-    verified_at = models.DateTimeField(null=True, blank=True)
-
-    received_time = models.DateTimeField(auto_now_add=True)
-    picked_up_time = models.DateTimeField(null=True, blank=True)
-
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    picked_up_time = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
-        return f"Parcel #{self.id} — {self.status} — {self.student.name}"
+        return f"Parcel for {self.student.name} - {self.status}"
 
     class Meta:
-        ordering = ['-received_time']
-        indexes = [
-            models.Index(fields=['status']),
-            models.Index(fields=['received_time']),
-            models.Index(fields=['student']),
-        ]
+        ordering = ['-created_at']

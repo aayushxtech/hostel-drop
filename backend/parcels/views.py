@@ -28,13 +28,12 @@ def create_parcel(request):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Create new parcel (remove get_or_create since parcels should be unique)
+        # Create new parcel
         parcel = Parcel.objects.create(
             student=student,
             description=data.get("description", ""),
             service=data.get("service", ""),
             status=data.get("status", Parcel.ParcelStatus.PENDING),
-            pickup_code=data.get("pickup_code", ""),
         )
 
         serializer = ParcelSerializer(parcel)
@@ -53,8 +52,6 @@ def create_parcel(request):
 
 @api_view(['GET'])
 def my_parcels(request):
-    # This needs authentication middleware to work properly
-    # For now, expecting clerk_id as query parameter
     clerk_id = request.GET.get('clerk_id')
 
     if not clerk_id:
@@ -75,26 +72,20 @@ def my_parcels(request):
 
 
 @api_view(['PATCH'])
-def picked_up_parcel(request, parcel_id):
+def mark_picked_up(request, parcel_id):
+    """Simple check - just mark parcel as picked up"""
     try:
         parcel = Parcel.objects.get(id=parcel_id)
 
         # Update status and timestamp
         parcel.status = Parcel.ParcelStatus.PICKED_UP
         parcel.picked_up_time = timezone.now()
-
-        # Handle verification if pickup_code is provided
-        pickup_code = request.data.get("pickup_code")
-        if pickup_code and parcel.pickup_code == pickup_code:
-            parcel.is_verified = True
-            parcel.verified_at = timezone.now()
-
         parcel.save()
 
         serializer = ParcelSerializer(parcel)
         return Response({
             "parcel": serializer.data,
-            "message": "Parcel marked as picked up"
+            "message": "Parcel marked as picked up successfully"
         }, status=status.HTTP_200_OK)
 
     except Parcel.DoesNotExist:
@@ -116,48 +107,6 @@ def all_parcels(request):
         parcels = Parcel.objects.all()
         serializer = ParcelSerializer(parcels, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response(
-            {"error": str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-
-@api_view(['PATCH'])
-def verify_parcel(request, parcel_id):
-    """New view to handle parcel verification"""
-    try:
-        parcel = Parcel.objects.get(id=parcel_id)
-        pickup_code = request.data.get("pickup_code")
-
-        if not pickup_code:
-            return Response(
-                {"error": "pickup_code is required"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if parcel.pickup_code == pickup_code:
-            parcel.is_verified = True
-            parcel.verified_at = timezone.now()
-            parcel.save()
-
-            serializer = ParcelSerializer(parcel)
-            return Response({
-                "parcel": serializer.data,
-                "message": "Parcel verified successfully"
-            }, status=status.HTTP_200_OK)
-        else:
-            return Response(
-                {"error": "Invalid pickup code"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-    except Parcel.DoesNotExist:
-        return Response(
-            {"error": "Parcel not found"},
-            status=status.HTTP_404_NOT_FOUND
-        )
-
     except Exception as e:
         return Response(
             {"error": str(e)},

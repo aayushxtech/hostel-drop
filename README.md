@@ -201,12 +201,11 @@ The backend is configured to allow requests from `http://localhost:3000` (fronte
 ```
 Staff receives parcel → Logs into system → Creates new parcel entry
 ```
-- **API Call**: `POST /api/parcels/create/`
+- **API Call**: `POST /parcels/create/`
 - **Data Required**:
   - `student_id` (links to the recipient)
   - `description` (what's in the parcel)
   - `service` (delivery company - Flipkart, Amazon, etc.)
-  - `pickup_code` (unique code for verification)
 - **System Action**: 
   - Verifies student exists
   - Creates parcel with status `PENDING`
@@ -217,43 +216,29 @@ Staff receives parcel → Logs into system → Creates new parcel entry
 System sends notification → Student receives alert about parcel arrival
 ```
 - **Potential channels**: Email, SMS, in-app notification
-- **Information shared**: Parcel description, pickup code, arrival time
+- **Information shared**: Parcel description, arrival time
 
 ### 3. **Student Checks Their Parcels**
 ```
 Student opens app → Views "My Parcels" → Sees pending parcel
 ```
-- **API Call**: `GET /api/parcels/my/?clerk_id={student_clerk_id}`
+- **API Call**: `GET /parcels/my/?clerk_id={student_clerk_id}`
 - **Student sees**:
   - Parcel description
   - Service provider
   - Arrival time
   - Status (PENDING)
-  - Whether it's verified
 
 ### 4. **Student Goes to Collect Parcel**
 ```
-Student visits hostel office → Provides pickup code → Staff verifies
+Student visits hostel office → Staff marks as picked up
 ```
 
-### 5. **Two-Step Verification Process**
-
-#### **Step A: Code Verification**
-```
-Staff enters pickup code → System verifies → Marks as verified
-```
-- **API Call**: `PATCH /api/parcels/{parcel_id}/verify/`
-- **Data**: `pickup_code`
-- **System Action**:
-  - Validates pickup code
-  - Sets `is_verified = True`
-  - Records `verified_at` timestamp
-
-#### **Step B: Parcel Handover**
+### 5. **Simple Parcel Handover**
 ```
 Staff hands over parcel → Marks as picked up → Process complete
 ```
-- **API Call**: `PATCH /api/parcels/{parcel_id}/picked-up/`
+- **API Call**: `PATCH /parcels/{parcel_id}/picked-up/`
 - **System Action**:
   - Changes status to `PICKED_UP`
   - Records `picked_up_time` timestamp
@@ -271,13 +256,9 @@ Staff hands over parcel → Marks as picked up → Process complete
      ↓
 🚶 Student visits office
      ↓
-🔐 Staff verifies pickup code
-     ↓
-✅ Parcel marked as VERIFIED
-     ↓
 📦 Staff hands over parcel
      ↓
-✅ Parcel marked as PICKED_UP
+✅ Staff marks as PICKED_UP
      ↓
 🎉 PROCESS COMPLETE
 ```
@@ -286,101 +267,72 @@ Staff hands over parcel → Marks as picked up → Process complete
 Throughout the process, the parcel has these possible states:
 - **`PENDING`** - Just arrived, waiting for pickup
 - **`PICKED_UP`** - Student has collected it
-- **Verification flags**:
-  - `is_verified: False/True` - Code verification status
-  - `verified_at` - When verification happened
+- **Timestamps**:
+  - `created_at` - When parcel was registered
   - `picked_up_time` - When parcel was handed over
 
 ### 8. **Admin/Staff Overview**
 ```
 Staff can view all parcels → Monitor pending/picked up status
 ```
-- **API Call**: `GET /api/parcels/all/`
+- **API Call**: `GET /parcels/all/`
 - **Staff can see**: All parcels, their status, and timestamps
 
 ## 🔗 Backend API Endpoints
 
-### Student Endpoints (`/api/students/`)
+### Student Endpoints (`/students/`)
 
-#### `POST /api/students/create/`
-- **Purpose**: Register a new student in the system
+#### `POST /sync-clerk/`
+- **Purpose**: Sync Clerk user data with backend student record
 - **Method**: POST
 - **Body**:
   ```json
   {
+    "clerk_id": "user_xxxxx",
     "name": "John Doe",
-    "clerk_id": "CLERK123",
-    "hostel": "Hostel A",
-    "room_number": "101",
-    "phone": "1234567890",
-    "email": "john@example.com"
+    "email": "john@example.com",
+    "profile_image": "https://img.clerk.com/xxxxx"
   }
   ```
-- **Response**: Student details with created timestamp
-- **Use Case**: Initial student registration by admin/staff
+- **Response**: Student details with created/updated status
+- **Use Case**: Automatic sync when user signs in via Clerk
 
-#### `GET /api/students/all/`
-- **Purpose**: Retrieve all registered students
-- **Method**: GET
-- **Response**: List of all students with their details
-- **Use Case**: Admin panel to view all students
+### Parcel Endpoints (`/parcels/`)
 
-### Parcel Endpoints (`/api/parcels/`)
-
-#### `POST /api/parcels/create/`
+#### `POST /parcels/create/`
 - **Purpose**: Register a new parcel arrival
 - **Method**: POST
 - **Body**:
   ```json
   {
-    "student_id": 1,
+    "student_id": "uuid-of-student",
     "description": "Amazon package",
     "service": "Amazon",
-    "pickup_code": "ABC123",
     "status": "PENDING"
   }
   ```
 - **Response**: Created parcel details
 - **Use Case**: Staff registers incoming parcel
 
-#### `GET /api/parcels/my/?clerk_id={clerk_id}`
+#### `GET /parcels/my/?clerk_id={clerk_id}`
 - **Purpose**: Get all parcels for a specific student
 - **Method**: GET
 - **Query Params**: `clerk_id` (student's clerk ID)
 - **Response**: List of parcels belonging to the student
 - **Use Case**: Student views their pending/picked up parcels
 
-#### `GET /api/parcels/all/`
+#### `GET /parcels/all/`
 - **Purpose**: Retrieve all parcels in the system
 - **Method**: GET
 - **Response**: Complete list of all parcels with status
 - **Use Case**: Staff/admin overview of all parcel activities
 
-#### `PATCH /api/parcels/{parcel_id}/verify/`
-- **Purpose**: Verify student's pickup code
-- **Method**: PATCH
-- **URL Params**: `parcel_id` (ID of the parcel)
-- **Body**:
-  ```json
-  {
-    "pickup_code": "ABC123"
-  }
-  ```
-- **Response**: Updated parcel with verification status
-- **Use Case**: Staff verifies student's pickup code before handover
-
-#### `PATCH /api/parcels/{parcel_id}/picked-up/`
+#### `PATCH /parcels/{parcel_id}/picked-up/`
 - **Purpose**: Mark parcel as picked up by student
 - **Method**: PATCH
 - **URL Params**: `parcel_id` (ID of the parcel)
-- **Body** (optional):
-  ```json
-  {
-    "pickup_code": "ABC123"
-  }
-  ```
 - **Response**: Updated parcel with pickup timestamp
-- **Use Case**: Final step when staff hands over parcel to student
+- **Use Case**: Staff marks parcel as collected when handing over to student
 
 ### API Response Structure
 
@@ -417,4 +369,4 @@ All endpoints follow a consistent response format:
 3. **Student Self-Service** - Students can't directly interact with their parcels
 4. **Audit Trail** - Limited tracking of who performed what actions
 
-This flow ensures secure parcel handover with proper verification while maintaining a clear audit trail of all parcel movements.
+This simplified flow ensures easy parcel management while maintaining a clear record of all parcel movements.

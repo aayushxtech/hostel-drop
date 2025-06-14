@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useUser } from "@clerk/nextjs";
 
 export type ParcelData = {
   studentName: string;
@@ -11,6 +12,7 @@ export type ParcelData = {
 };
 
 const ParcelForm = ({ onAddParcel }: { onAddParcel: (parcel: ParcelData) => void }) => {
+  const { user } = useUser();
   const [form, setForm] = useState<ParcelData>({
     studentName: "",
     roomNo: "",
@@ -26,14 +28,28 @@ const ParcelForm = ({ onAddParcel }: { onAddParcel: (parcel: ParcelData) => void
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!user?.id) {
+      alert("❌ User not authenticated.");
+      return;
+    }
+
     try {
-      const response = await fetch("http://127.0.0.1:8000/parcels/create", {
+      const res = await fetch(`http://127.0.0.1:8000/students/get-id?clerk_id=${user.id}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to fetch student_id");
+      }
+
+      const student_id = data.student_id;
+
+      const response = await fetch("http://127.0.0.1:8000/parcels/create/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          student: form.studentName,
+          student_id,
           description: `Room No: ${form.roomNo} | Tracking ID: ${form.trackingId}`,
           service: form.courier,
           status: form.status,
@@ -47,12 +63,9 @@ const ParcelForm = ({ onAddParcel }: { onAddParcel: (parcel: ParcelData) => void
       const result = await response.json();
       console.log("✅ Parcel saved:", result);
 
-      // Add to dashboard state
       onAddParcel(form);
-
       alert("✅ Parcel submitted successfully!");
 
-      // Reset form
       setForm({
         studentName: "",
         roomNo: "",
@@ -60,10 +73,9 @@ const ParcelForm = ({ onAddParcel }: { onAddParcel: (parcel: ParcelData) => void
         courier: "",
         status: "Pending",
       });
-
-    } catch (err) {
-      console.error("❌ Error submitting parcel:", err);
-      alert("❌ Failed to submit parcel. Please try again.");
+    } catch (err: any) {
+      console.error("❌ Error:", err);
+      alert("❌ Failed to submit parcel. " + err.message);
     }
   };
 

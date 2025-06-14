@@ -1,21 +1,30 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import ParcelForm, { ParcelData } from "@/components/ParcelForm";
 import ParcelList from "@/components/ParcelList";
+import { useUser } from "@clerk/nextjs";
+import { useSyncClerkUser } from "@/lib/useSyncClerkUser";
+import { ParcelData } from "@/components/ParcelForm";
 
-export default function DashboardPage() {
+export default function StudentDashboardPage() {
+  const { user } = useUser(); // Clerk user info
+  const synced = useSyncClerkUser(); // Sync with Django
   const [parcels, setParcels] = useState<ParcelData[]>([]);
 
   useEffect(() => {
     const fetchParcels = async () => {
+      if (!user?.id || !synced) return;
+
       try {
-        const response = await fetch("http://127.0.0.1:8000/parcels/all");
+        const response = await fetch(
+          `http://127.0.0.1:8000/parcels/my?clerk_id=${user.id}`
+        );
         if (!response.ok) throw new Error("Failed to fetch parcels");
 
         const data = await response.json();
-        console.log("📦 Fetched parcels:", data);
+        console.log("📦 Student parcels:", data);
 
+        // Map backend to ParcelData type
         const mappedParcels = data.map((p: any) => {
           let roomNo = "N/A";
           let trackingId = "N/A";
@@ -39,22 +48,23 @@ export default function DashboardPage() {
 
         setParcels(mappedParcels);
       } catch (err) {
-        console.error("❌ Error fetching parcels:", err);
+        console.error("❌ Error fetching student parcels:", err);
       }
     };
 
     fetchParcels();
-  }, []);
-
-  const handleAddParcel = (newParcel: ParcelData) => {
-    setParcels((prev) => [...prev, newParcel]);
-  };
+  }, [user, synced]);
 
   return (
-    <div className="flex flex-col items-center space-y-10 mt-8">
-      <ParcelForm onAddParcel={handleAddParcel} />
-      <h2 className="text-2xl font-bold">📦 Parcel Register</h2>
-      <ParcelList parcels={parcels} />
+    <div className="flex flex-col items-center mt-8 space-y-8">
+      <h2 className="text-2xl font-bold">
+        👤 {user?.fullName || "Student"}'s Parcels
+      </h2>
+      {synced ? (
+        <ParcelList parcels={parcels} />
+      ) : (
+        <p>🔄 Syncing user with backend...</p>
+      )}
     </div>
   );
 }

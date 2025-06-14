@@ -1,8 +1,4 @@
 from django.db import models
-<<<<<<< HEAD
-
-# Create your models here.
-=======
 from students.models import Student
 
 
@@ -28,4 +24,4 @@ class Parcel(models.Model):
 
     class Meta:
         ordering = ['-created_at']
->>>>>>> 26bfea981fd2d7e08a7f9b7b00c97915a204975d
+

@@ -1,22 +1,3 @@
-<<<<<<< HEAD
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-import json
-
-# Temporary in-memory parcel list
-PARCELS = []
-
-@csrf_exempt
-def create_parcel(request):
-    if request.method == "POST":
-        data = json.loads(request.body)
-        PARCELS.append(data)
-        return JsonResponse({"message": "Parcel created successfully!"}, status=201)
-    return JsonResponse({"error": "Invalid request"}, status=400)
-
-def all_parcels(request):
-    return JsonResponse(PARCELS, safe=False)
-=======
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -131,4 +112,3 @@ def all_parcels(request):
             {"error": str(e)},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
->>>>>>> 26bfea981fd2d7e08a7f9b7b00c97915a204975d

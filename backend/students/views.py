@@ -177,3 +177,43 @@ def get_student_id(request):
             {"error": "Student not found"},
             status=status.HTTP_404_NOT_FOUND
         )
+@api_view(['GET'])
+def get_my_details(request, student_id):
+    try:
+        student = Student.objects.get(id=student_id)
+        serializer = StudentSerializer(student)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Student.DoesNotExist:
+        return Response(
+            {"error": "Student not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(['PUT'])
+def update_my_details(request, student_id):
+    try:
+        student = Student.objects.get(id=student_id)
+    except Student.DoesNotExist:
+        return Response(
+            {"error": "Student not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    serializer = StudentSerializer(student, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+@api_view(['GET'])
+def get_my_parcels(request, student_id):
+    try:
+        student = Student.objects.get(id=student_id)
+    except Student.DoesNotExist:
+        return Response(
+            {"error": "Student not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    parcels = Parcel.objects.filter(student=student).order_by('-created_at')
+    serializer = ParcelSerializer(parcels, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)

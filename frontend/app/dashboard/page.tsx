@@ -1,5 +1,4 @@
 "use client";
-<<<<<<< HEAD
 
 import React, { useEffect, useState } from "react";
 import ParcelForm, { ParcelData } from "@/components/ParcelForm";
@@ -64,20 +63,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-=======
-import React from "react";
-import { useSyncClerkUser } from "@/lib/useSyncClerkUser";
-
-const Dashboard = () => {
-  const synced = useSyncClerkUser();
-
-  return (
-    <div>
-      <h1>Dashboard</h1>
-      <p>{synced ? "✅ User synced to backend" : "🔄 Syncing user..."}</p>
-    </div>
-  );
-};
-
-export default Dashboard;
->>>>>>> 26bfea981fd2d7e08a7f9b7b00c97915a204975d

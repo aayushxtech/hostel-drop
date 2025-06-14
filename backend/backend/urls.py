@@ -23,4 +23,5 @@ urlpatterns = [
     path('parcels/', include('parcels.urls')),
     path("sync-clerk/", sync_clerk_user, name="sync_clerk_user"),
     path('students/', include('students.urls')),
+    path('parcels/', include('parcels.urls')),
 ]

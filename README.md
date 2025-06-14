@@ -42,7 +42,7 @@ HostelDrop/
 
 ```bash
 git clone https://github.com/aayushxtech/hostel-drop.git
-cd HostelDrop
+cd hostel-drop
 ```
 
 ### 2. Frontend Setup
@@ -194,3 +194,179 @@ The backend is configured to allow requests from `http://localhost:3000` (fronte
 4. **CORS errors**: Check `CORS_ALLOWED_ORIGINS` in Django settings 
 5. **Node.js version**: Use Node.js 18+ for frontend compatibility
 6. **Environment variables not loading**: Restart development servers after updating environment files
+
+## 📦 Parcel Arrival User Flow
+
+### 1. **Parcel Registration by Hostel Staff**
+```
+Staff receives parcel → Logs into system → Creates new parcel entry
+```
+- **API Call**: `POST /parcels/create/`
+- **Data Required**:
+  - `student_id` (links to the recipient)
+  - `description` (what's in the parcel)
+  - `service` (delivery company - Flipkart, Amazon, etc.)
+- **System Action**: 
+  - Verifies student exists
+  - Creates parcel with status `PENDING`
+  - Records `created_at` timestamp
+
+### 2. **Student Notification** *(Not implemented yet)*
+```
+System sends notification → Student receives alert about parcel arrival
+```
+- **Potential channels**: Email, SMS, in-app notification
+- **Information shared**: Parcel description, arrival time
+
+### 3. **Student Checks Their Parcels**
+```
+Student opens app → Views "My Parcels" → Sees pending parcel
+```
+- **API Call**: `GET /parcels/my/?clerk_id={student_clerk_id}`
+- **Student sees**:
+  - Parcel description
+  - Service provider
+  - Arrival time
+  - Status (PENDING)
+
+### 4. **Student Goes to Collect Parcel**
+```
+Student visits hostel office → Staff marks as picked up
+```
+
+### 5. **Simple Parcel Handover**
+```
+Staff hands over parcel → Marks as picked up → Process complete
+```
+- **API Call**: `PATCH /parcels/{parcel_id}/picked-up/`
+- **System Action**:
+  - Changes status to `PICKED_UP`
+  - Records `picked_up_time` timestamp
+
+### 6. **Complete Flow Visualization**
+
+```
+📋 PARCEL ARRIVES
+     ↓
+🏢 Staff creates entry (PENDING)
+     ↓
+📱 Student gets notified
+     ↓
+👀 Student checks "My Parcels"
+     ↓
+🚶 Student visits office
+     ↓
+📦 Staff hands over parcel
+     ↓
+✅ Staff marks as PICKED_UP
+     ↓
+🎉 PROCESS COMPLETE
+```
+
+### 7. **Status Tracking**
+Throughout the process, the parcel has these possible states:
+- **`PENDING`** - Just arrived, waiting for pickup
+- **`PICKED_UP`** - Student has collected it
+- **Timestamps**:
+  - `created_at` - When parcel was registered
+  - `picked_up_time` - When parcel was handed over
+
+### 8. **Admin/Staff Overview**
+```
+Staff can view all parcels → Monitor pending/picked up status
+```
+- **API Call**: `GET /parcels/all/`
+- **Staff can see**: All parcels, their status, and timestamps
+
+## 🔗 Backend API Endpoints
+
+### Student Endpoints (`/students/`)
+
+#### `POST /sync-clerk/`
+- **Purpose**: Sync Clerk user data with backend student record
+- **Method**: POST
+- **Body**:
+  ```json
+  {
+    "clerk_id": "user_xxxxx",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "profile_image": "https://img.clerk.com/xxxxx"
+  }
+  ```
+- **Response**: Student details with created/updated status
+- **Use Case**: Automatic sync when user signs in via Clerk
+
+### Parcel Endpoints (`/parcels/`)
+
+#### `POST /parcels/create/`
+- **Purpose**: Register a new parcel arrival
+- **Method**: POST
+- **Body**:
+  ```json
+  {
+    "student_id": "uuid-of-student",
+    "description": "Amazon package",
+    "service": "Amazon",
+    "status": "PENDING"
+  }
+  ```
+- **Response**: Created parcel details
+- **Use Case**: Staff registers incoming parcel
+
+#### `GET /parcels/my/?clerk_id={clerk_id}`
+- **Purpose**: Get all parcels for a specific student
+- **Method**: GET
+- **Query Params**: `clerk_id` (student's clerk ID)
+- **Response**: List of parcels belonging to the student
+- **Use Case**: Student views their pending/picked up parcels
+
+#### `GET /parcels/all/`
+- **Purpose**: Retrieve all parcels in the system
+- **Method**: GET
+- **Response**: Complete list of all parcels with status
+- **Use Case**: Staff/admin overview of all parcel activities
+
+#### `PATCH /parcels/{parcel_id}/picked-up/`
+- **Purpose**: Mark parcel as picked up by student
+- **Method**: PATCH
+- **URL Params**: `parcel_id` (ID of the parcel)
+- **Response**: Updated parcel with pickup timestamp
+- **Use Case**: Staff marks parcel as collected when handing over to student
+
+### API Response Structure
+
+All endpoints follow a consistent response format:
+
+**Success Response:**
+```json
+{
+  "data": { /* requested data */ },
+  "message": "Operation successful",
+  "status": "success"
+}
+```
+
+**Error Response:**
+```json
+{
+  "error": "Error description",
+  "status": "error"
+}
+```
+
+### Common HTTP Status Codes
+- `200 OK` - Successful GET/PATCH operations
+- `201 Created` - Successful POST operations
+- `400 Bad Request` - Invalid request data
+- `404 Not Found` - Resource not found
+- `500 Internal Server Error` - Server-side errors
+
+## 🔍 Current Implementation Gaps
+
+1. **Notification System** - No automated notifications to students
+2. **Authentication** - Views don't have proper user authentication
+3. **Student Self-Service** - Students can't directly interact with their parcels
+4. **Audit Trail** - Limited tracking of who performed what actions
+
+This simplified flow ensures easy parcel management while maintaining a clear record of all parcel movements.

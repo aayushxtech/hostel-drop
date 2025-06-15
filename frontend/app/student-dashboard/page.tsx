@@ -11,20 +11,28 @@ export default function StudentDashboardPage() {
   const synced = useSyncClerkUser(); // Sync with Django
   const [parcels, setParcels] = useState<ParcelData[]>([]);
 
+  const [activeTab, setActiveTab] = useState<"Pending" | "Picked Up">("Pending");
+
   useEffect(() => {
     const fetchParcels = async () => {
       if (!user?.id || !synced) return;
 
       try {
         const response = await fetch(
-          `http://127.0.0.1:8000/parcels/my?clerk_id=${user.id}`
+          `http://127.0.0.1:8000/parcels/my/?clerk_id=${user.id}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
         );
+
         if (!response.ok) throw new Error("Failed to fetch parcels");
 
         const data = await response.json();
-        console.log("📦 Student parcels:", data);
+        console.log("📦 My parcels:", data);
 
-        // Map backend to ParcelData type
         const mappedParcels = data.map((p: any) => {
           let roomNo = "N/A";
           let trackingId = "N/A";
@@ -43,6 +51,8 @@ export default function StudentDashboardPage() {
             trackingId,
             courier: p.service,
             status: p.status,
+            createdAt: p.created_at,
+            pickedUpTime: p.picked_up_time,
           };
         });
 
@@ -55,13 +65,43 @@ export default function StudentDashboardPage() {
     fetchParcels();
   }, [user, synced]);
 
+  const filteredParcels = parcels.filter((parcel) =>
+    activeTab === "Pending"
+      ? parcel.status === "PENDING"
+      : parcel.status === "PICKED_UP"
+  );
+
   return (
-    <div className="flex flex-col items-center mt-8 space-y-8">
+    <div className="flex flex-col items-center mt-8 space-y-6">
       <h2 className="text-2xl font-bold">
         👤 {user?.fullName || "Student"}'s Parcels
       </h2>
+
+      <div className="flex space-x-4">
+        <button
+          onClick={() => setActiveTab("Pending")}
+          className={`px-4 py-2 rounded ${
+            activeTab === "Pending"
+              ? "bg-blue-500 text-white"
+              : "bg-gray-200 text-gray-700"
+          }`}
+        >
+          Pending
+        </button>
+        <button
+          onClick={() => setActiveTab("Picked Up")}
+          className={`px-4 py-2 rounded ${
+            activeTab === "Picked Up"
+              ? "bg-blue-500 text-white"
+              : "bg-gray-200 text-gray-700"
+          }`}
+        >
+          Picked Up
+        </button>
+      </div>
+
       {synced ? (
-        <ParcelList parcels={parcels} />
+        <ParcelList parcels={filteredParcels} showStudentName={false} />
       ) : (
         <p>🔄 Syncing user with backend...</p>
       )}

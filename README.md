@@ -433,8 +433,6 @@ All endpoints follow a consistent response format:
 ├── my/                           # GET - Get my parcels (by clerk_id)
 ├── all/                          # GET - Get all parcels
 └── {parcel_id}/picked-up/        # PATCH - Mark as picked up
-
-/sync-clerk/                       # POST - Legacy sync endpoint (deprecated)
 ```
 
 ## 🔍 Current Implementation Gaps

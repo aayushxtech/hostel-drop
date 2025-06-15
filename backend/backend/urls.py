@@ -20,7 +20,6 @@ from students.views import sync_clerk_user
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('parcels/', include('parcels.urls')),          
+    path('parcels/', include('parcels.urls')),
     path('students/', include('students.urls')),
-    path("sync-clerk/", sync_clerk_user, name="sync_clerk_user"),
 ]

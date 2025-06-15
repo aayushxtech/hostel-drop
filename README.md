@@ -116,6 +116,7 @@ Create a `.env.local` file in the frontend directory:
 ```env
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
+NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
 ```
 
 #### Backend (.env)
@@ -146,6 +147,7 @@ Component configuration can be found in [`frontend/components.json`](frontend/co
 - [`app/layout.tsx`](frontend/app/layout.tsx) - Root layout with fonts
 - [`app/globals.css`](frontend/app/globals.css) - Global styles and theme
 - [`lib/utils.ts`](frontend/lib/utils.ts) - Utility functions (cn helper)
+- [`lib/useSyncClerkUser.ts`](frontend/lib/useSyncClerkUser.ts) - Clerk user sync hook
 - [`.env.local`](frontend/.env.local) - Frontend environment variables
 
 ### Backend
@@ -282,7 +284,7 @@ Staff can view all parcels → Monitor pending/picked up status
 
 ### Student Endpoints (`/students/`)
 
-#### `POST /sync-clerk/`
+#### `POST /students/sync-clerk/`
 - **Purpose**: Sync Clerk user data with backend student record
 - **Method**: POST
 - **Body**:
@@ -291,11 +293,56 @@ Staff can view all parcels → Monitor pending/picked up status
     "clerk_id": "user_xxxxx",
     "name": "John Doe",
     "email": "john@example.com",
-    "profile_image": "https://img.clerk.com/xxxxx"
+    "profile_image": "https://img.clerk.com/xxxxx",
+    "phone": "1234567890",
+    "hostel_block": "Block A",
+    "room_number": "101"
   }
   ```
 - **Response**: Student details with created/updated status
 - **Use Case**: Automatic sync when user signs in via Clerk
+
+#### `GET /students/by-clerk/?clerk_id={clerk_id}`
+- **Purpose**: Get student details by Clerk ID
+- **Method**: GET
+- **Query Params**: `clerk_id` (student's clerk ID from authentication)
+- **Response**: Student profile data
+- **Use Case**: Frontend retrieval of current user's profile
+
+#### `GET /students/{student_id}/`
+- **Purpose**: Get student details by student UUID
+- **Method**: GET
+- **URL Params**: `student_id` (UUID of the student)
+- **Response**: Complete student profile
+- **Use Case**: Internal API calls, admin operations
+
+#### `PATCH /students/{student_id}/update/`
+- **Purpose**: Update student profile information
+- **Method**: PATCH
+- **URL Params**: `student_id` (UUID of the student)
+- **Body**:
+  ```json
+  {
+    "phone": "9876543210",
+    "hostel_block": "Block B",
+    "room_number": "205"
+  }
+  ```
+- **Response**: Updated student details
+- **Use Case**: Profile updates by student or admin
+
+#### `GET /students/{student_id}/parcels/`
+- **Purpose**: Get all parcels for a specific student
+- **Method**: GET
+- **URL Params**: `student_id` (UUID of the student)
+- **Response**: List of student's parcels with status
+- **Use Case**: View student's parcel history
+
+#### `GET /students/all/`
+- **Purpose**: Retrieve all active students
+- **Method**: GET
+- **Response**: List of all students (admin view)
+- **Use Case**: Staff/admin overview of all registered students
 
 ### Parcel Endpoints (`/parcels/`)
 
@@ -334,6 +381,13 @@ Staff can view all parcels → Monitor pending/picked up status
 - **Response**: Updated parcel with pickup timestamp
 - **Use Case**: Staff marks parcel as collected when handing over to student
 
+### Legacy Endpoint (Deprecated)
+
+#### `POST /sync-clerk/`
+- **Status**: ⚠️ **Deprecated** - Use `/students/sync-clerk/` instead
+- **Purpose**: Legacy sync endpoint
+- **Note**: This endpoint exists for backward compatibility but should not be used in new implementations
+
 ### API Response Structure
 
 All endpoints follow a consistent response format:
@@ -341,9 +395,10 @@ All endpoints follow a consistent response format:
 **Success Response:**
 ```json
 {
-  "data": { /* requested data */ },
+  "student": { /* student data */ },
+  "parcel": { /* parcel data */ },
   "message": "Operation successful",
-  "status": "success"
+  "created": true
 }
 ```
 
@@ -351,16 +406,36 @@ All endpoints follow a consistent response format:
 ```json
 {
   "error": "Error description",
-  "status": "error"
+  "details": "Additional error details"
 }
 ```
 
 ### Common HTTP Status Codes
 - `200 OK` - Successful GET/PATCH operations
 - `201 Created` - Successful POST operations
-- `400 Bad Request` - Invalid request data
+- `400 Bad Request` - Invalid request data or validation errors
 - `404 Not Found` - Resource not found
 - `500 Internal Server Error` - Server-side errors
+
+### URL Structure Summary
+
+```
+/students/
+├── sync-clerk/                    # POST - Sync Clerk user
+├── by-clerk/                      # GET - Get student by clerk_id
+├── all/                           # GET - Get all students
+├── {student_id}/                  # GET - Get student by UUID
+├── {student_id}/update/           # PATCH - Update student
+└── {student_id}/parcels/          # GET - Get student's parcels
+
+/parcels/
+├── create/                        # POST - Create new parcel
+├── my/                           # GET - Get my parcels (by clerk_id)
+├── all/                          # GET - Get all parcels
+└── {parcel_id}/picked-up/        # PATCH - Mark as picked up
+
+/sync-clerk/                       # POST - Legacy sync endpoint (deprecated)
+```
 
 ## 🔍 Current Implementation Gaps
 
@@ -368,5 +443,6 @@ All endpoints follow a consistent response format:
 2. **Authentication** - Views don't have proper user authentication
 3. **Student Self-Service** - Students can't directly interact with their parcels
 4. **Audit Trail** - Limited tracking of who performed what actions
+5. **Endpoint Consistency** - Some duplicate functionality between student and parcel endpoints
 
 This simplified flow ensures easy parcel management while maintaining a clear record of all parcel movements.

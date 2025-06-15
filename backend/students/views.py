@@ -1,122 +1,12 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from django.utils import timezone
+from django.core.exceptions import ValidationError
 from parcels.models import Parcel
 from parcels.serializers import ParcelSerializer
 from students.models import Student
 from students.serializers import StudentSerializer
 
-
-# ---------- PARCEL VIEWS ----------
-
-@api_view(['POST'])
-def create_parcel(request):
-    data = request.data
-    student_id = data.get("student_id")
-
-    if not student_id:
-        return Response(
-            {"error": "student_id is required"},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    try:
-        # Verify student exists
-        try:
-            student = Student.objects.get(id=student_id)
-        except Student.DoesNotExist:
-            return Response(
-                {"error": "Student not found"},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        # Create new parcel
-        parcel = Parcel.objects.create(
-            student=student,
-            description=data.get("description", ""),
-            service=data.get("service", ""),
-            status=data.get("status", Parcel.ParcelStatus.PENDING),
-        )
-
-        serializer = ParcelSerializer(parcel)
-        return Response({
-            "parcel": serializer.data,
-            "created": True,
-            "message": "Parcel created successfully"
-        }, status=status.HTTP_201_CREATED)
-
-    except Exception as e:
-        return Response(
-            {"error": str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-
-@api_view(['GET'])
-def my_parcels(request):
-    clerk_id = request.GET.get('clerk_id')
-
-    if not clerk_id:
-        return Response(
-            {"error": "clerk_id is required"},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    try:
-        parcels = Parcel.objects.filter(student__clerk_id=clerk_id)
-        serializer = ParcelSerializer(parcels, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response(
-            {"error": str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-
-@api_view(['PATCH'])
-def mark_picked_up(request, parcel_id):
-    """Mark parcel as picked up"""
-    try:
-        parcel = Parcel.objects.get(id=parcel_id)
-
-        parcel.status = Parcel.ParcelStatus.PICKED_UP
-        parcel.picked_up_time = timezone.now()
-        parcel.save()
-
-        serializer = ParcelSerializer(parcel)
-        return Response({
-            "parcel": serializer.data,
-            "message": "Parcel marked as picked up successfully"
-        }, status=status.HTTP_200_OK)
-
-    except Parcel.DoesNotExist:
-        return Response(
-            {"error": "Parcel not found"},
-            status=status.HTTP_404_NOT_FOUND
-        )
-
-    except Exception as e:
-        return Response(
-            {"error": str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-
-@api_view(['GET'])
-def all_parcels(request):
-    try:
-        parcels = Parcel.objects.all()
-        serializer = ParcelSerializer(parcels, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response(
-            {"error": str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-
-# ---------- STUDENT VIEWS ----------
 
 @api_view(['POST'])
 def sync_clerk_user(request):
@@ -136,21 +26,36 @@ def sync_clerk_user(request):
                 "name": data.get("name", ""),
                 "email": data.get("email", ""),
                 "profile_image": data.get("profile_image", ""),
+                "phone": data.get("phone", ""),
+                "hostel_block": data.get("hostel_block", ""),
+                "room_number": data.get("room_number", ""),
             }
         )
 
         if not created:
+            # Update existing student with new data
             student.name = data.get("name", student.name)
-            student.profile_image = data.get("profile_image", student.profile_image)
+            student.email = data.get("email", student.email)
+            student.profile_image = data.get(
+                "profile_image", student.profile_image)
+            student.phone = data.get("phone", student.phone)
+            student.hostel_block = data.get(
+                "hostel_block", student.hostel_block)
+            student.room_number = data.get("room_number", student.room_number)
             student.save()
 
         serializer = StudentSerializer(student)
         return Response({
             "student": serializer.data,
             "created": created,
-            "message": "Student created" if created else "Student updated"
-        }, status=status.HTTP_200_OK)
+            "message": "Student created successfully" if created else "Student updated successfully"
+        }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
+    except ValidationError as e:
+        return Response(
+            {"error": "Validation error", "details": str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
     except Exception as e:
         return Response(
             {"error": str(e)},
@@ -159,8 +64,28 @@ def sync_clerk_user(request):
 
 
 @api_view(['GET'])
-def get_student_id(request):
-    clerk_id = request.GET.get("clerk_id")
+def get_student_details(request, student_id):
+    """Get student details by student ID"""
+    try:
+        student = Student.objects.get(id=student_id)
+        serializer = StudentSerializer(student)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Student.DoesNotExist:
+        return Response(
+            {"error": "Student not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+def get_student_by_clerk_id(request):
+    """Get student details by clerk ID"""
+    clerk_id = request.GET.get('clerk_id')
 
     if not clerk_id:
         return Response(
@@ -170,17 +95,6 @@ def get_student_id(request):
 
     try:
         student = Student.objects.get(clerk_id=clerk_id)
-        return Response({"student_id": student.id}, status=status.HTTP_200_OK)
-
-    except Student.DoesNotExist:
-        return Response(
-            {"error": "Student not found"},
-            status=status.HTTP_404_NOT_FOUND
-        )
-@api_view(['GET'])
-def get_my_details(request, student_id):
-    try:
-        student = Student.objects.get(id=student_id)
         serializer = StudentSerializer(student)
         return Response(serializer.data, status=status.HTTP_200_OK)
     except Student.DoesNotExist:
@@ -188,10 +102,16 @@ def get_my_details(request, student_id):
             {"error": "Student not found"},
             status=status.HTTP_404_NOT_FOUND
         )
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
-@api_view(['PUT'])
-def update_my_details(request, student_id):
+@api_view(['PATCH'])
+def update_student_details(request, student_id):
+    """Update student details by student ID"""
     try:
         student = Student.objects.get(id=student_id)
     except Student.DoesNotExist:
@@ -199,14 +119,36 @@ def update_my_details(request, student_id):
             {"error": "Student not found"},
             status=status.HTTP_404_NOT_FOUND
         )
-    serializer = StudentSerializer(student, data=request.data, partial=True)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
+    try:
+        serializer = StudentSerializer(
+            student, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "student": serializer.data,
+                "message": "Student updated successfully"
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response(
+                {"error": "Validation error", "details": serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    except ValidationError as e:
+        return Response(
+            {"error": "Validation error", "details": str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 
 @api_view(['GET'])
 def get_my_parcels(request, student_id):
+    """Get all parcels for a specific student by student ID"""
     try:
         student = Student.objects.get(id=student_id)
     except Student.DoesNotExist:
@@ -214,6 +156,28 @@ def get_my_parcels(request, student_id):
             {"error": "Student not found"},
             status=status.HTTP_404_NOT_FOUND
         )
-    parcels = Parcel.objects.filter(student=student).order_by('-created_at')
-    serializer = ParcelSerializer(parcels, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+
+    try:
+        parcels = Parcel.objects.filter(
+            student=student).order_by('-created_at')
+        serializer = ParcelSerializer(parcels, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(['GET'])
+def get_all_students(request):
+    """Get all students (for admin use)"""
+    try:
+        students = Student.objects.filter(is_active=True).order_by('name')
+        serializer = StudentSerializer(students, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

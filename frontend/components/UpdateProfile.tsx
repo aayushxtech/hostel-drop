@@ -349,14 +349,6 @@ const StudentProfile: React.FC = () => {
             </p>
           )}
         </div>
-
-        {/* Clerk ID (Read-only) */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Account ID
-          </label>
-          <p className="text-gray-500 py-2 text-sm font-mono">{user?.id}</p>
-        </div>
       </div>
 
       {/* Save Button */}

@@ -1,6 +1,6 @@
 # HostelDrop
 
-A full-stack web application built with Next.js frontend and Django backend for hostel management and delivery services.
+A full-stack web application built with Next.js frontend and Django backend for hostel parcel management system.
 
 ## 🏗️ Project Structure
 
@@ -11,6 +11,8 @@ HostelDrop/
 │   ├── components/   # Reusable UI components
 │   └── lib/         # Utility functions
 └── backend/          # Django REST API
+    ├── students/    # Student management app
+    ├── parcels/     # Parcel management app
     └── backend/     # Django project configuration
 ```
 
@@ -20,7 +22,7 @@ HostelDrop/
 - **Next.js 15** - React framework with App Router
 - **TypeScript** - Type safety
 - **Tailwind CSS v4** - Styling with custom theme
-- **Shadcn/ui** - UI component library
+- **Clerk** - Authentication and user management
 - **Lucide React** - Icon library
 
 ### Backend
@@ -132,29 +134,32 @@ The project is currently configured with a Neon PostgreSQL database. Update the 
 
 ## 🎨 UI Components
 
-This project uses Shadcn/ui components with:
-- **Style**: New York
-- **Base Color**: Neutral
-- **CSS Variables**: Enabled
-- **Icon Library**: Lucide React
+This project uses:
+- **Tailwind CSS v4** with custom theme configuration
+- **Custom CSS Variables** for consistent theming
+- **Responsive Design** with mobile-first approach
+- **Lucide React** for icons
 
-Component configuration can be found in [`frontend/components.json`](frontend/components.json).
+Component styling can be found in [`frontend/app/globals.css`](frontend/app/globals.css).
 
 ## 📁 Key Files
 
 ### Frontend
-- [`app/page.tsx`](frontend/app/page.tsx) - Main landing page
-- [`app/layout.tsx`](frontend/app/layout.tsx) - Root layout with fonts
-- [`app/globals.css`](frontend/app/globals.css) - Global styles and theme
-- [`lib/utils.ts`](frontend/lib/utils.ts) - Utility functions (cn helper)
+- [`app/page.tsx`](frontend/app/page.tsx) - Main landing page with navigation
+- [`app/dashboard/page.tsx`](frontend/app/dashboard/page.tsx) - Staff parcel management dashboard
+- [`app/student-dashboard/page.tsx`](frontend/app/student-dashboard/page.tsx) - Student parcel view
+- [`components/UpdateProfile.tsx`](frontend/components/UpdateProfile.tsx) - Student profile management
+- [`components/SearchBar.tsx`](frontend/components/SearchBar.tsx) - Parcel search functionality
 - [`lib/useSyncClerkUser.ts`](frontend/lib/useSyncClerkUser.ts) - Clerk user sync hook
-- [`.env.local`](frontend/.env.local) - Frontend environment variables
+- [`app/globals.css`](frontend/app/globals.css) - Global styles and theme variables
 
 ### Backend
+- [`students/models.py`](backend/students/models.py) - Student data model
+- [`parcels/models.py`](backend/parcels/models.py) - Parcel data model
+- [`students/views.py`](backend/students/views.py) - Student API endpoints
+- [`parcels/views.py`](backend/parcels/views.py) - Parcel API endpoints
 - [`backend/settings.py`](backend/backend/settings.py) - Django configuration
 - [`backend/urls.py`](backend/backend/urls.py) - URL routing
-- [`manage.py`](backend/manage.py) - Django management commands
-- [`.env`](backend/.env) - Backend environment variables
 
 ## 🔄 Development Workflow
 
@@ -197,88 +202,72 @@ The backend is configured to allow requests from `http://localhost:3000` (fronte
 5. **Node.js version**: Use Node.js 18+ for frontend compatibility
 6. **Environment variables not loading**: Restart development servers after updating environment files
 
-## 📦 Parcel Arrival User Flow
+## 📦 Current Application Workflow
 
-### 1. **Parcel Registration by Hostel Staff**
+### 1. **User Authentication & Profile Setup**
 ```
-Staff receives parcel → Logs into system → Creates new parcel entry
+User signs up/in via Clerk → Profile sync to backend → Profile completion check
 ```
-- **API Call**: `POST /parcels/create/`
-- **Data Required**:
-  - `student_id` (links to the recipient)
-  - `description` (what's in the parcel)
-  - `service` (delivery company - Flipkart, Amazon, etc.)
-- **System Action**: 
-  - Verifies student exists
-  - Creates parcel with status `PENDING`
-  - Records `created_at` timestamp
+- **Authentication**: Handled by Clerk with automatic user sync
+- **Profile Management**: Users can complete/update their profile via [`UpdateProfile.tsx`](frontend/components/UpdateProfile.tsx)
+- **Required Fields**: Name, Email, Phone, Hostel Block, Room Number
+- **Profile Status**: Displays completion status with visual indicators
 
-### 2. **Student Notification** *(Not implemented yet)*
+### 2. **Student Dashboard Experience**
 ```
-System sends notification → Student receives alert about parcel arrival
+Student logs in → Views dashboard → Sees profile status → Can update profile
 ```
-- **Potential channels**: Email, SMS, in-app notification
-- **Information shared**: Parcel description, arrival time
+- **Dashboard**: [`app/student-dashboard/page.tsx`](frontend/app/student-dashboard/page.tsx)
+- **Features**:
+  - Profile completion status indicator
+  - Profile editing capabilities
+  - Real-time form validation
+  - Success/error feedback
 
-### 3. **Student Checks Their Parcels**
+### 3. **Staff Dashboard Experience**
 ```
-Student opens app → Views "My Parcels" → Sees pending parcel
+Staff logs in → Access parcel management → Register/view parcels → Search functionality
 ```
-- **API Call**: `GET /parcels/my/?clerk_id={student_clerk_id}`
-- **Student sees**:
-  - Parcel description
-  - Service provider
-  - Arrival time
-  - Status (PENDING)
+- **Dashboard**: [`app/dashboard/page.tsx`](frontend/app/dashboard/page.tsx)
+- **Features**:
+  - Parcel registration system
+  - Search and filter parcels
+  - Status management (PENDING/PICKED_UP)
+  - Student information display
 
-### 4. **Student Goes to Collect Parcel**
+### 4. **Profile Management Flow**
 ```
-Student visits hostel office → Staff marks as picked up
+Incomplete profile warning → Edit mode → Form validation → Save → Success feedback
 ```
+- **Component**: [`UpdateProfile.tsx`](frontend/components/UpdateProfile.tsx)
+- **Validation**: All fields required before saving
+- **API Integration**: Automatic sync with backend
+- **User Experience**: 
+  - Warning indicators for incomplete profiles
+  - Edit/view mode toggling
+  - Loading states during saves
+  - Success confirmations
 
-### 5. **Simple Parcel Handover**
+### 5. **Search and Filter System**
 ```
-Staff hands over parcel → Marks as picked up → Process complete
+Staff enters search query → Real-time filtering → Results display → Clear functionality
 ```
-- **API Call**: `PATCH /parcels/{parcel_id}/picked-up/`
-- **System Action**:
-  - Changes status to `PICKED_UP`
-  - Records `picked_up_time` timestamp
+- **Component**: [`SearchBar.tsx`](frontend/components/SearchBar.tsx)
+- **Search Fields**: Name, Tracking ID, Room, Block, Courier service
+- **Features**:
+  - Real-time search
+  - Clear search button
+  - Responsive design
+  - Search icon and clear icon
 
-### 6. **Complete Flow Visualization**
-
+### 6. **Data Flow Architecture**
 ```
-📋 PARCEL ARRIVES
-     ↓
-🏢 Staff creates entry (PENDING)
-     ↓
-📱 Student gets notified
-     ↓
-👀 Student checks "My Parcels"
-     ↓
-🚶 Student visits office
-     ↓
-📦 Staff hands over parcel
-     ↓
-✅ Staff marks as PICKED_UP
-     ↓
-🎉 PROCESS COMPLETE
+Frontend (React/Next.js) ↔ Clerk Auth ↔ Backend (Django) ↔ PostgreSQL Database
 ```
-
-### 7. **Status Tracking**
-Throughout the process, the parcel has these possible states:
-- **`PENDING`** - Just arrived, waiting for pickup
-- **`PICKED_UP`** - Student has collected it
-- **Timestamps**:
-  - `created_at` - When parcel was registered
-  - `picked_up_time` - When parcel was handed over
-
-### 8. **Admin/Staff Overview**
-```
-Staff can view all parcels → Monitor pending/picked up status
-```
-- **API Call**: `GET /parcels/all/`
-- **Staff can see**: All parcels, their status, and timestamps
+- **Authentication**: Clerk handles user auth, syncs with Django backend
+- **Data Sync**: [`useSyncClerkUser.ts`](frontend/lib/useSyncClerkUser.ts) manages user synchronization
+- **API Communication**: RESTful APIs for all data operations
+- **Database**: PostgreSQL with proper indexing for performance
 
 ## 🔗 Backend API Endpoints
 
@@ -293,7 +282,6 @@ Staff can view all parcels → Monitor pending/picked up status
     "clerk_id": "user_xxxxx",
     "name": "John Doe",
     "email": "john@example.com",
-    "profile_image": "https://img.clerk.com/xxxxx",
     "phone": "1234567890",
     "hostel_block": "Block A",
     "room_number": "101"
@@ -309,13 +297,6 @@ Staff can view all parcels → Monitor pending/picked up status
 - **Response**: Student profile data
 - **Use Case**: Frontend retrieval of current user's profile
 
-#### `GET /students/{student_id}/`
-- **Purpose**: Get student details by student UUID
-- **Method**: GET
-- **URL Params**: `student_id` (UUID of the student)
-- **Response**: Complete student profile
-- **Use Case**: Internal API calls, admin operations
-
 #### `PATCH /students/{student_id}/update/`
 - **Purpose**: Update student profile information
 - **Method**: PATCH
@@ -323,20 +304,14 @@ Staff can view all parcels → Monitor pending/picked up status
 - **Body**:
   ```json
   {
+    "name": "Updated Name",
     "phone": "9876543210",
     "hostel_block": "Block B",
     "room_number": "205"
   }
   ```
 - **Response**: Updated student details
-- **Use Case**: Profile updates by student or admin
-
-#### `GET /students/{student_id}/parcels/`
-- **Purpose**: Get all parcels for a specific student
-- **Method**: GET
-- **URL Params**: `student_id` (UUID of the student)
-- **Response**: List of student's parcels with status
-- **Use Case**: View student's parcel history
+- **Use Case**: Profile updates via UpdateProfile component
 
 #### `GET /students/all/`
 - **Purpose**: Retrieve all active students
@@ -354,11 +329,10 @@ Staff can view all parcels → Monitor pending/picked up status
   {
     "student_id": "uuid-of-student",
     "description": "Amazon package",
-    "service": "Amazon",
-    "status": "PENDING"
+    "service": "Amazon"
   }
   ```
-- **Response**: Created parcel details
+- **Response**: Created parcel details with tracking ID
 - **Use Case**: Staff registers incoming parcel
 
 #### `GET /parcels/my/?clerk_id={clerk_id}`
@@ -380,13 +354,6 @@ Staff can view all parcels → Monitor pending/picked up status
 - **URL Params**: `parcel_id` (ID of the parcel)
 - **Response**: Updated parcel with pickup timestamp
 - **Use Case**: Staff marks parcel as collected when handing over to student
-
-### Legacy Endpoint (Deprecated)
-
-#### `POST /sync-clerk/`
-- **Status**: ⚠️ **Deprecated** - Use `/students/sync-clerk/` instead
-- **Purpose**: Legacy sync endpoint
-- **Note**: This endpoint exists for backward compatibility but should not be used in new implementations
 
 ### API Response Structure
 
@@ -417,30 +384,27 @@ All endpoints follow a consistent response format:
 - `404 Not Found` - Resource not found
 - `500 Internal Server Error` - Server-side errors
 
-### URL Structure Summary
+## 🔍 Current Implementation Status
 
-```
-/students/
-├── sync-clerk/                    # POST - Sync Clerk user
-├── by-clerk/                      # GET - Get student by clerk_id
-├── all/                           # GET - Get all students
-├── {student_id}/                  # GET - Get student by UUID
-├── {student_id}/update/           # PATCH - Update student
-└── {student_id}/parcels/          # GET - Get student's parcels
+### ✅ Implemented Features
+1. **User Authentication** - Clerk integration with automatic sync
+2. **Profile Management** - Complete CRUD operations for student profiles
+3. **Parcel Management** - Basic parcel registration and status tracking
+4. **Search Functionality** - Real-time search across multiple fields
+5. **Responsive Design** - Mobile-first approach with Tailwind CSS
+6. **Form Validation** - Client-side validation with user feedback
+7. **Database Integration** - PostgreSQL with proper indexing
 
-/parcels/
-├── create/                        # POST - Create new parcel
-├── my/                           # GET - Get my parcels (by clerk_id)
-├── all/                          # GET - Get all parcels
-└── {parcel_id}/picked-up/        # PATCH - Mark as picked up
-```
+### 🔄 In Progress
+1. **Student Parcel Dashboard** - View for students to see their parcels
+2. **Enhanced Staff Dashboard** - Better parcel management interface
+3. **Status Management** - Pickup confirmation workflow
 
-## 🔍 Current Implementation Gaps
+### 📋 Future Enhancements
+1. **Notification System** - Email/SMS alerts for parcel arrivals
+2. **Pickup Verification** - QR codes or pickup codes for security
+3. **Analytics Dashboard** - Parcel statistics and reporting
+4. **Audit Trail** - Detailed logging of all actions
+5. **Bulk Operations** - Mass import/export functionality
 
-1. **Notification System** - No automated notifications to students
-2. **Authentication** - Views don't have proper user authentication
-3. **Student Self-Service** - Students can't directly interact with their parcels
-4. **Audit Trail** - Limited tracking of who performed what actions
-5. **Endpoint Consistency** - Some duplicate functionality between student and parcel endpoints
-
-This simplified flow ensures easy parcel management while maintaining a clear record of all parcel movements.
+This workflow ensures efficient parcel management while maintaining a user-friendly experience for both students

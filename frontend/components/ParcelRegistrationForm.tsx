@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { sendParcelNotification, ParcelData } from "@/lib/sendMail";
 
 interface Student {
   id: string;
@@ -22,6 +23,12 @@ const ParcelRegistrationForm: React.FC<ParcelRegistrationFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [studentsLoading, setStudentsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // ✅ Add notification status state
+  const [notificationStatus, setNotificationStatus] = useState<{
+    email_sent: boolean;
+    email_error?: string;
+  } | null>(null);
+
   const [formData, setFormData] = useState({
     studentId: "",
     courier: "",
@@ -54,12 +61,12 @@ const ParcelRegistrationForm: React.FC<ParcelRegistrationFormProps> = ({
         }
 
         const data = await response.json();
-        console.log("🔧 Students data:", data);
+        console.log("Students data:", data);
 
         setStudents(data);
-        console.log("✅ Students loaded successfully:", data.length);
+        console.log("Students loaded successfully:", data.length);
       } catch (err) {
-        console.error("❌ Error fetching students:", err);
+        console.error("Error fetching students:", err);
         setError(
           `Failed to load students: ${
             err instanceof Error ? err.message : "Unknown error"
@@ -122,6 +129,8 @@ const ParcelRegistrationForm: React.FC<ParcelRegistrationFormProps> = ({
 
     setLoading(true);
     setError(null);
+    // Reset notification status
+    setNotificationStatus(null);
 
     try {
       const selectedStudent = students.find((s) => s.id === formData.studentId);
@@ -131,7 +140,7 @@ const ParcelRegistrationForm: React.FC<ParcelRegistrationFormProps> = ({
         throw new Error("Selected student not found");
       }
 
-      // ✅ Backend will auto-generate tracking_id - no need to include it
+      // Backend will auto-generate tracking_id - no need to include it
       const payload = {
         student_id: formData.studentId,
         service: formData.courier.trim() || "Manual Entry",
@@ -169,7 +178,56 @@ const ParcelRegistrationForm: React.FC<ParcelRegistrationFormProps> = ({
       }
 
       const result = JSON.parse(responseText);
-      console.log("✅ Parcel registered successfully:", result);
+      console.log("Parcel registered successfully:", result);
+
+      // Send email notification after successful parcel creation
+      if (selectedStudent.email) {
+        console.log("Sending email notification to:", selectedStudent.email);
+
+        const parcelData: ParcelData = {
+          trackingId: result.parcel?.tracking_id || "Unknown",
+          service: formData.courier.trim() || "Manual Entry",
+          description: formData.description || "No additional description",
+          createdAt: result.parcel?.created_at || new Date().toISOString(),
+          hostelBlock: formData.customBlock,
+          roomNumber: formData.customRoom,
+        };
+
+        try {
+          const emailResult = await sendParcelNotification(
+            selectedStudent.name,
+            selectedStudent.email,
+            parcelData
+          );
+
+          setNotificationStatus({
+            email_sent: emailResult.success,
+            email_error: emailResult.success ? undefined : emailResult.error,
+          });
+
+          console.log(
+            `Email notification ${
+              emailResult.success ? "sent successfully" : "failed"
+            }:`,
+            emailResult
+          );
+        } catch (emailError) {
+          console.error("Email notification error:", emailError);
+          setNotificationStatus({
+            email_sent: false,
+            email_error:
+              emailError instanceof Error
+                ? emailError.message
+                : "Unknown email error",
+          });
+        }
+      } else {
+        console.log("No email address found for student");
+        setNotificationStatus({
+          email_sent: false,
+          email_error: "Student has no email address",
+        });
+      }
 
       // Reset form
       setFormData({
@@ -183,10 +241,16 @@ const ParcelRegistrationForm: React.FC<ParcelRegistrationFormProps> = ({
       // Notify parent to refresh data
       onParcelAdded();
 
-      // ✅ Show success message with auto-generated tracking ID
+      // ✅ Enhanced success message with email notification status
       const trackingId = result.parcel?.tracking_id || "Unknown";
+      const emailStatus = notificationStatus?.email_sent
+        ? "\n📧 Email notification sent successfully!"
+        : notificationStatus?.email_error
+        ? `\n⚠️ Email notification failed: ${notificationStatus.email_error}`
+        : "";
+
       alert(
-        `✅ Parcel registered successfully for ${selectedStudent.name}!\nTracking ID: ${trackingId}`
+        `✅ Parcel registered successfully for ${selectedStudent.name}!\nTracking ID: ${trackingId}${emailStatus}`
       );
     } catch (err) {
       console.error("❌ Error registering parcel:", err);
@@ -207,7 +271,8 @@ const ParcelRegistrationForm: React.FC<ParcelRegistrationFormProps> = ({
 
       <p className="text-sm text-gray-600 mb-4">
         Please fill out the form below to register a new parcel for a student. A
-        unique tracking ID will be automatically generated.
+        unique tracking ID will be automatically generated and an email
+        notification will be sent.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -258,7 +323,6 @@ const ParcelRegistrationForm: React.FC<ParcelRegistrationFormProps> = ({
           )}
         </div>
 
-        {/* Hostel Block Selection/Input */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Hostel Block *
@@ -329,7 +393,6 @@ const ParcelRegistrationForm: React.FC<ParcelRegistrationFormProps> = ({
           </div>
         )}
 
-        {/* Additional Description */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Additional Notes (Optional)
@@ -352,19 +415,65 @@ const ParcelRegistrationForm: React.FC<ParcelRegistrationFormProps> = ({
           </div>
         )}
 
+        {/* ✅ Email Notification Status Display */}
+        {notificationStatus && (
+          <div className="mt-4 p-3 rounded-lg border">
+            <h4 className="font-medium text-gray-900 mb-2">
+              📧 Email Notification Status:
+            </h4>
+            <div
+              className={`flex items-center text-sm p-2 rounded ${
+                notificationStatus.email_sent
+                  ? "text-green-600 bg-green-50 border-green-200"
+                  : "text-red-600 bg-red-50 border-red-200"
+              } border`}
+            >
+              {notificationStatus.email_sent ? "✅" : "❌"}
+              <span className="ml-2">
+                {notificationStatus.email_sent
+                  ? "Email notification sent successfully!"
+                  : `Email notification failed: ${notificationStatus.email_error}`}
+              </span>
+            </div>
+            {notificationStatus.email_sent && (
+              <p className="text-xs text-gray-500 mt-1">
+                The student will receive an email with parcel details and pickup
+                instructions.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Submit Button */}
         <button
           type="submit"
           disabled={loading || studentsLoading || students.length === 0}
-          className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
         >
-          {loading
-            ? "Registering..."
-            : studentsLoading
-            ? "Loading..."
-            : "📦 Register Parcel"}
+          {loading ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Registering & Sending Email...
+            </>
+          ) : studentsLoading ? (
+            "Loading..."
+          ) : (
+            "📦 Register Parcel & Send Notification"
+          )}
         </button>
       </form>
+
+      {/* ✅ Information about email notifications */}
+      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <h4 className="font-medium text-blue-900 mb-1">
+          📬 Email Notifications
+        </h4>
+        <p className="text-sm text-blue-700">
+          When you register a parcel, an email notification will be
+          automatically sent to the student with their parcel details, tracking
+          ID, and pickup instructions.
+        </p>
+      </div>
     </div>
   );
 };

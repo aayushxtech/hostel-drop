@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { redirect } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import ParcelRegistrationForm from "@/components/ParcelRegistrationForm";
+import LoadingSpinner from "@/components/Loader";
 
 export type ParcelData = {
   id?: number;
@@ -28,11 +29,41 @@ interface FilterOptions {
   sortOrder: "asc" | "desc";
 }
 
+// Add this interface near the top of your file with other type definitions
+interface ApiParcelData {
+  id: number;
+  student?:
+    | {
+        name: string;
+      }
+    | string;
+  tracking_id?: string;
+  description?: string;
+  service?: string;
+  status: string;
+  created_at?: string;
+  picked_up_time?: string;
+}
+
 export default function GuardDashboardPage() {
   const { user, isLoaded } = useUser();
-  //if (user?.primaryEmailAddress?.emailAddress !== "admin@example.com") {
-   // return redirect("/403"); // Redirect to 403 page if not admin
- // }
+
+  if (!isLoaded || !user) {
+    return <LoadingSpinner />;
+  }
+
+  // Email authorization check
+  const userPrimaryEmail = user.primaryEmailAddress?.emailAddress;
+  const userEmailAddresses = user.emailAddresses.map(
+    (email) => email.emailAddress
+  );
+
+  if (
+    userPrimaryEmail !== "admin@gmail.com" &&
+    !userEmailAddresses.includes("admin@gmail.com")
+  ) {
+    redirect("/403");
+  }
 
   const [allParcels, setAllParcels] = useState<ParcelData[]>([]); // ✅ Store all parcels
   const [parcels, setParcels] = useState<ParcelData[]>([]); // ✅ Currently displayed parcels
@@ -69,25 +100,27 @@ export default function GuardDashboardPage() {
     process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
   // ✅ Extract unique values for filter dropdowns
-const extractFilterOptions = useCallback((parcelList: ParcelData[]) => {
-  const blocks = [
-    ...new Set(
-      parcelList
-        .map((p) => p.block)
-        .filter((b): b is string => typeof b === "string" && b !== "N/A")
-    ),
-  ].sort();
+  const extractFilterOptions = useCallback((parcelList: ParcelData[]) => {
+    const blocks = [
+      ...new Set(
+        parcelList
+          .map((p) => p.block)
+          .filter((b): b is string => typeof b === "string" && b !== "N/A")
+      ),
+    ].sort();
 
-  const couriers = [
-    ...new Set(
-      parcelList
-        .map((p) => p.courier)
-        .filter((c): c is string => typeof c === "string" && c !== "Unknown Service")
-    ),
-  ].sort();
+    const couriers = [
+      ...new Set(
+        parcelList
+          .map((p) => p.courier)
+          .filter(
+            (c): c is string => typeof c === "string" && c !== "Unknown Service"
+          )
+      ),
+    ].sort();
 
-  setFilterOptions({ blocks, couriers });
-}, []);
+    setFilterOptions({ blocks, couriers });
+  }, []);
 
   // ✅ Apply filters and search
   const applyFiltersAndSearch = useCallback(
@@ -158,7 +191,7 @@ const extractFilterOptions = useCallback((parcelList: ParcelData[]) => {
 
       // Sorting
       filtered.sort((a, b) => {
-        let aValue: any, bValue: any;
+        let aValue: string | Date | number, bValue: string | Date | number;
 
         switch (filterOptions.sortBy) {
           case "studentName":
@@ -258,7 +291,7 @@ const extractFilterOptions = useCallback((parcelList: ParcelData[]) => {
       console.log("📦 Raw backend data:", data);
 
       // ✅ Updated data mapping
-      const mapped: ParcelData[] = data.map((p: any) => {
+      const mapped: ParcelData[] = data.map((p: ApiParcelData) => {
         let roomNo = "N/A";
         let block = "N/A";
 
@@ -520,12 +553,11 @@ const extractFilterOptions = useCallback((parcelList: ParcelData[]) => {
               value={searchQuery}
               onChange={handleSearchChange}
               onClear={() => {
-              setSearchQuery("");
-              const filtered = applyFiltersAndSearch(allParcels, "", filters);
-              setFilteredParcels(filtered);
-            }}
-/>
-
+                setSearchQuery("");
+                const filtered = applyFiltersAndSearch(allParcels, "", filters);
+                setFilteredParcels(filtered);
+              }}
+            />
 
             {/* ✅ Advanced Filters Panel */}
             {showFilters && (

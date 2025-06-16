@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import { redirect } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import ParcelRegistrationForm from "@/components/ParcelRegisterationForm";
 
@@ -28,6 +29,9 @@ interface FilterOptions {
 
 export default function GuardDashboardPage() {
   const { user, isLoaded } = useUser();
+  if (user?.primaryEmailAddress?.emailAddress !== "admin@example.com") {
+    return redirect("/403"); // Redirect to 403 page if not admin
+  }
 
   const [allParcels, setAllParcels] = useState<ParcelData[]>([]); // ✅ Store all parcels
   const [parcels, setParcels] = useState<ParcelData[]>([]); // ✅ Currently displayed parcels
@@ -108,7 +112,7 @@ export default function GuardDashboardPage() {
       // Date range filter
       if (filterOptions.dateRange) {
         const now = new Date();
-        let startDate = new Date();
+        const startDate = new Date();
 
         switch (filterOptions.dateRange) {
           case "today":

@@ -17,7 +17,7 @@ const Home = () => {
 
         {/* Staff Dashboard Button */}
         <Link href="/dashboard">
-          <button className="mt-4 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+          <button className="mt-4 px-6 py-2 gap-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
             Go to Parcel Register
           </button>
         </Link>
@@ -34,4 +34,3 @@ const Home = () => {
 };
 
 export default Home;
-

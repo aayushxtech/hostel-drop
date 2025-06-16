@@ -1,7 +1,18 @@
 "use client";
 
 import React from "react";
-import { ParcelData } from "./ParcelForm";
+
+interface ParcelData {
+  id?: number;
+  studentName: string;
+  roomNo: string;
+  block?: string;
+  trackingId: string;
+  courier: string;
+  status: string;
+  createdAt?: string;
+  pickedUpTime?: string;
+}
 
 interface ParcelCardProps {
   data: ParcelData;

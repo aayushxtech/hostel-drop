@@ -68,22 +68,25 @@ export default function GuardDashboardPage() {
     process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
   // ✅ Extract unique values for filter dropdowns
-  const extractFilterOptions = useCallback((parcelList: ParcelData[]) => {
-    const blocks = [
-      ...new Set(
-        parcelList.map((p) => p.block).filter((b) => b && b !== "N/A")
-      ),
-    ].sort();
-    const couriers = [
-      ...new Set(
-        parcelList
-          .map((p) => p.courier)
-          .filter((c) => c && c !== "Unknown Service")
-      ),
-    ].sort();
+const extractFilterOptions = useCallback((parcelList: ParcelData[]) => {
+  const blocks = [
+    ...new Set(
+      parcelList
+        .map((p) => p.block)
+        .filter((b): b is string => typeof b === "string" && b !== "N/A")
+    ),
+  ].sort();
 
-    setFilterOptions({ blocks, couriers });
-  }, []);
+  const couriers = [
+    ...new Set(
+      parcelList
+        .map((p) => p.courier)
+        .filter((c): c is string => typeof c === "string" && c !== "Unknown Service")
+    ),
+  ].sort();
+
+  setFilterOptions({ blocks, couriers });
+}, []);
 
   // ✅ Apply filters and search
   const applyFiltersAndSearch = useCallback(

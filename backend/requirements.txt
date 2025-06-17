@@ -2,9 +2,11 @@ asgiref==3.8.1
 certifi==2025.4.26
 cffi==1.17.1
 charset-normalizer==3.4.2
+cloudinary==1.44.0
 colorama==0.4.6
 dj-database-url==3.0.0
 Django==5.2.3
+django-cloudinary-storage==0.3.0
 django-cors-headers==4.7.0
 djangorestframework==3.16.0
 filelock==3.18.0
@@ -12,6 +14,7 @@ future==1.0.0
 gevent==25.5.1
 greenlet==3.2.3
 idna==3.10
+pillow==11.2.1
 psycopg==3.2.9
 psycopg-binary==3.2.9
 pycparser==2.22
@@ -21,6 +24,7 @@ python-dotenv==1.1.0
 requests==2.32.4
 requests-file==2.1.0
 setuptools==80.9.0
+six==1.17.0
 sqlparse==0.5.3
 tldextract==5.3.0
 typing_extensions==4.14.0

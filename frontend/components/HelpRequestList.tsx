@@ -1,68 +1,81 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import toast from "react-hot-toast";
-import { useUser } from "@clerk/nextjs"; // import Clerk
+import React from "react";
 
 interface HelpRequest {
   id: number;
   trackingId: string;
   issueType: string;
+  message?: string;
   status: "pending" | "in_progress" | "resolved";
   created_at?: string;
 }
 
-const HelpRequestList: React.FC = () => {
-  const { user } = useUser(); // get user from Clerk
-  const [helpRequests, setHelpRequests] = useState<HelpRequest[]>([]);
-  const [loading, setLoading] = useState(true);
+interface HelpRequestListProps {
+  helpRequests: HelpRequest[];
+  loading: boolean;
+  onRefresh: () => void;
+}
 
-  useEffect(() => {
-    const fetchHelpRequests = async () => {
-      if (!user) return;
-
-      try {
-        const email = user.emailAddresses[0].emailAddress;
-
-        const res = await fetch(
-          `http://127.0.0.1:8000/support/my/?email=${email}`
-        );
-        if (!res.ok) throw new Error("Failed to fetch help requests");
-
-        const data = await res.json();
-        setHelpRequests(data);
-      } catch (err) {
-        console.error(err);
-        toast.error("Could not load help requests");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchHelpRequests();
-  }, [user]);
-
+const HelpRequestList: React.FC<HelpRequestListProps> = ({
+  helpRequests,
+  loading,
+  onRefresh,
+}) => {
   return (
-    <div className="mt-8">
-      <h2 className="text-xl font-semibold mb-4">📋 My Help Requests</h2>
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">📄 My Help Requests</h2>
+        <button
+          onClick={onRefresh}
+          disabled={loading}
+          className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors disabled:opacity-50"
+        >
+          {loading ? "🔄 Loading..." : "🔄 Refresh"}
+        </button>
+      </div>
 
       {loading ? (
-        <p className="text-gray-500">Loading help requests...</p>
+        <p className="text-center py-4">Loading help requests...</p>
       ) : helpRequests.length === 0 ? (
-        <p className="text-gray-500">No help requests yet.</p>
+        <p className="text-center py-4">No help requests submitted yet.</p>
       ) : (
         <div className="space-y-4">
           {helpRequests.map((req) => (
             <div
               key={req.id}
-              className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm"
+              className="border border-gray-300 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition"
             >
-              <div className="flex justify-between items-center mb-2">
-                <p className="text-sm font-medium text-gray-700">
-                  📦 <span className="text-gray-900">{req.trackingId}</span>
-                </p>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                <div>
+                  <p className="text-sm font-medium text-gray-800">
+                    🆔{" "}
+                    <span className="font-semibold">
+                      {req.trackingId?.trim()
+                        ? req.trackingId
+                        : "No ID available"}
+                    </span>
+                  </p>
+
+                  <p className="text-sm text-gray-600 mt-1">
+                    📝 <span className="font-medium">Issue:</span>{" "}
+                    {req.message?.trim()
+                      ? req.message
+                      : req.issueType?.trim()
+                      ? req.issueType
+                      : "No issue provided"}
+                  </p>
+
+                  <p className="text-xs text-gray-400 mt-1">
+                    📅 <span className="font-medium">Submitted:</span>{" "}
+                    {req.created_at
+                      ? new Date(req.created_at).toLocaleString()
+                      : "N/A"}
+                  </p>
+                </div>
+
                 <span
-                  className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                  className={`text-xs font-bold px-3 py-1 rounded-full self-start sm:self-auto ${
                     req.status === "resolved"
                       ? "bg-green-100 text-green-800"
                       : req.status === "in_progress"
@@ -73,13 +86,6 @@ const HelpRequestList: React.FC = () => {
                   {req.status.replace("_", " ").toUpperCase()}
                 </span>
               </div>
-              <p className="text-sm text-gray-600">📝 Issue: {req.issueType}</p>
-              <p className="text-xs text-gray-400 mt-1">
-                Submitted on:{" "}
-                {req.created_at
-                  ? new Date(req.created_at).toLocaleString()
-                  : "N/A"}
-              </p>
             </div>
           ))}
         </div>

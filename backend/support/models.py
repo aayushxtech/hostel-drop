@@ -16,6 +16,7 @@ class HelpRequest(models.Model):
     user_type = models.CharField(max_length=10, choices=USER_TYPES)
     student = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True, blank=True)
     parcel = models.ForeignKey(Parcel, on_delete=models.CASCADE, null=True, blank=True)
+    email = models.EmailField(null=True, blank=True)
     message = models.TextField()
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)

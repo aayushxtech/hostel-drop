@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import toast from "react-hot-toast";
+import { useUser } from "@clerk/nextjs"; // ✅ Added this
 
 interface ParcelData {
   id?: number;
@@ -26,6 +27,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({
   showStudentName = false,
   onMarkAsPickedUp,
 }) => {
+  const { user } = useUser(); // Using Clerk user
   const [showHelpForm, setShowHelpForm] = useState(false);
   const [issueType, setIssueType] = useState("");
   const [message, setMessage] = useState("");
@@ -53,6 +55,11 @@ const ParcelCard: React.FC<ParcelCardProps> = ({
       return;
     }
 
+    if (!user) {
+      toast.error("You must be logged in to submit a help request.");
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -62,10 +69,10 @@ const ParcelCard: React.FC<ParcelCardProps> = ({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          user_type: "student", 
+          email: user?.primaryEmailAddress?.emailAddress,
           parcel: data.id,
-          issue_type: issueType,
-          message: message.trim() === "" ? "No message provided" : message, 
+          message: message.trim() !== "" ? message : issueType,
+          user_type: "student",
         }),
       });
 
@@ -202,3 +209,4 @@ const ParcelCard: React.FC<ParcelCardProps> = ({
 };
 
 export default ParcelCard;
+

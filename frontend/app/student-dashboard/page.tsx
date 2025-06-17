@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import ParcelList from "@/components/ParcelList";
 import StudentProfile from "@/components/UpdateProfile";
 import { useUser } from "@clerk/nextjs";
 import { useSyncClerkUser } from "@/lib/useSyncClerkUser";
+import HelpRequestList from "@/components/HelpRequestList";
 
 export type ParcelData = {
   id?: number;
@@ -32,7 +33,7 @@ export default function StudentDashboardPage() {
   const baseUrl =
     process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
-  const fetchParcels = useCallback(async () => {
+  const fetchParcels = async () => {
     if (!user?.id || !synced || !isLoaded) return;
 
     const now = Date.now();
@@ -75,14 +76,48 @@ export default function StudentDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, synced, isLoaded, baseUrl, lastFetchTime]);
+  };
 
-  useEffect(() => {
-    if (isLoaded && user?.id && synced) {
-      fetchParcels();
-      fetchHelpRequests(); // Fetch requests too on load
+  // 🧠 Help Request State
+  const [helpRequests, setHelpRequests] = useState<any[]>([]);
+  const [helpLoading, setHelpLoading] = useState(false);
+
+  const fetchHelpRequests = async () => {
+    if (!user?.id) return;
+
+    try {
+      setHelpLoading(true);
+      const email = user.emailAddresses[0].emailAddress;
+      const res = await fetch(`${baseUrl}/support/my/?email=${email}`);
+      const data = await res.json();
+
+      if (!Array.isArray(data)) {
+        console.error("Help request response is not an array:", data);
+        setHelpRequests([]);
+        return;
+      }
+
+      const sorted = data.sort(
+        (a: any, b: any) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      setHelpRequests(sorted);
+    } catch (err) {
+      console.error("Error fetching help requests:", err);
+    } finally {
+      setHelpLoading(false);
     }
-  }, [isLoaded, user?.id, synced]);
+  };
+
+  //  Fetch data on load
+  const [hasFetched, setHasFetched] = useState(false);
+  useEffect(() => {
+    if (!hasFetched && isLoaded && user?.id && synced) {
+      fetchParcels();
+      fetchHelpRequests();
+      setHasFetched(true);
+    }
+  }, [isLoaded, user?.id, synced, hasFetched]);
 
   const handleRefresh = () => {
     setLastFetchTime(0);
@@ -99,25 +134,6 @@ export default function StudentDashboardPage() {
 
   const pendingCount = parcels.filter((p) => p.status === "PENDING").length;
   const pickedUpCount = parcels.filter((p) => p.status === "PICKED_UP").length;
-
-  // 🔧 Help Requests
-  const [helpRequests, setHelpRequests] = useState<any[]>([]);
-  const [helpLoading, setHelpLoading] = useState(false);
-
-  const fetchHelpRequests = useCallback(async () => {
-    if (!user?.id) return;
-
-    try {
-      setHelpLoading(true);
-      const res = await fetch(`${baseUrl}/help-requests/?clerk_id=${user.id}`);
-      const data = await res.json();
-      setHelpRequests(data);
-    } catch (err) {
-      console.error("Error fetching help requests:", err);
-    } finally {
-      setHelpLoading(false);
-    }
-  }, [user?.id, baseUrl]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -158,7 +174,6 @@ export default function StudentDashboardPage() {
           {activeTab === "Profile" && (
             <div>
               <StudentProfile />
-              {/* Stats */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                 <div className="bg-white rounded-lg shadow-md p-6 text-center">
                   <div className="text-2xl font-bold text-yellow-600 mb-2">
@@ -203,37 +218,13 @@ export default function StudentDashboardPage() {
             </div>
           )}
 
-          {/* Help Requests */}
+          {/* My Help Requests */}
           {activeTab === "My Requests" && (
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">📄 My Help Requests</h2>
-                <button
-                  onClick={fetchHelpRequests}
-                  disabled={helpLoading}
-                  className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors disabled:opacity-50"
-                >
-                  {helpLoading ? "🔄 Loading..." : "🔄 Refresh"}
-                </button>
-              </div>
-
-              {helpLoading ? (
-                <p className="text-center py-4">Loading requests...</p>
-              ) : helpRequests.length === 0 ? (
-                <p className="text-center py-4">No help requests submitted yet.</p>
-              ) : (
-                <ul className="divide-y divide-gray-200">
-                  {helpRequests.map((req, index) => (
-                    <li key={index} className="py-3">
-                      🛠️ <strong>{req.issueType}</strong> — {req.message}
-                      <div className="text-xs text-gray-500">
-                        {new Date(req.created_at).toLocaleString()}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            <HelpRequestList
+              helpRequests={helpRequests}
+              loading={helpLoading}
+              onRefresh={fetchHelpRequests}
+            />
           )}
         </div>
       </div>

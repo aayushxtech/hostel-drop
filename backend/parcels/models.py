@@ -1,6 +1,7 @@
 from django.db import models
 from students.models import Student
 import uuid
+from cloudinary.models import CloudinaryField
 
 
 class Parcel(models.Model):
@@ -11,7 +12,7 @@ class Parcel(models.Model):
     student = models.ForeignKey(
         Student, on_delete=models.CASCADE, related_name='parcels')
     tracking_id = models.CharField(
-        max_length=36, unique=True, default=uuid.uuid4, editable=False)  # ✅ Auto-generated UUID
+        max_length=36, unique=True, default=uuid.uuid4, editable=False)
     description = models.TextField(blank=True, null=True)
     service = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(
@@ -21,15 +22,27 @@ class Parcel(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     picked_up_time = models.DateTimeField(blank=True, null=True)
+    
+    image = CloudinaryField(
+        'image',
+        folder='hosteldrop/parcels',
+        blank=True,
+        null=True,
+        transformation={
+            'width': 800,
+            'height': 600,
+            'crop': 'limit',
+            'quality': 'auto:good'
+        }
+    )
 
     def save(self, *args, **kwargs):
-        # ✅ Ensure tracking_id is always generated
         if not self.tracking_id:
             self.tracking_id = str(uuid.uuid4())
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"Parcel {self.tracking_id} for {self.student.name} - {self.status}"
+        return f"Parcel {self.tracking_id} -> {self.student.name} - {self.status}"
 
     class Meta:
         ordering = ['-created_at']

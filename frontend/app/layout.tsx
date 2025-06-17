@@ -1,3 +1,4 @@
+import { Toaster } from "react-hot-toast";
 import { type Metadata } from "next";
 import "@/app/globals.css"; 
 import {
@@ -32,7 +33,12 @@ export default function RootLayout({
               <UserButton />
             </SignedIn>
           </header>
+
+          {/* Your App Content */}
           {children}
+
+          {/* 🔔 Toast Messages */}
+          <Toaster position="top-right" />
         </body>
       </html>
     </ClerkProvider>

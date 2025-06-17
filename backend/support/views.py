@@ -24,3 +24,18 @@ def get_help_requests(request):
 
     serializer = HelpRequestSerializer(help_requests, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+@api_view(['GET'])
+def get_my_help_requests(request):
+    email = request.query_params.get('email', None)
+
+    if not email:
+        return Response({"error": "Email parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        student = Student.objects.get(email=email)
+    except Student.DoesNotExist:
+        return Response({"error": "Student not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    help_requests = HelpRequest.objects.filter(student=student)
+    serializer = HelpRequestSerializer(help_requests, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)

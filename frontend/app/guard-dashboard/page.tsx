@@ -50,7 +50,7 @@ interface ApiParcelData {
 export default function GuardDashboardPage() {
   const { user, isLoaded } = useUser();
 
-  // ✅ Declare ALL hooks at the top level, before any conditional logic
+  // ✅ Declare ALL hooks at the top level BEFORE any conditional logic
   const [allParcels, setAllParcels] = useState<ParcelData[]>([]);
   const [parcels, setParcels] = useState<ParcelData[]>([]);
   const [filteredParcels, setFilteredParcels] = useState<ParcelData[]>([]);
@@ -84,29 +84,6 @@ export default function GuardDashboardPage() {
 
   const baseUrl =
     process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
-
-  // ✅ All hooks are declared above, now we can do conditional rendering
-  if (!isLoaded) {
-    return <LoadingSpinner />;
-  }
-
-  if (!user) {
-    return <LoadingSpinner />;
-  }
-
-  // Email authorization check
-  const userPrimaryEmail = user.primaryEmailAddress?.emailAddress;
-  const userEmailAddresses = user.emailAddresses.map(
-    (email) => email.emailAddress
-  );
-
-  // Uncomment if you want to restrict access
-  // if (
-  //   userPrimaryEmail !== "admin@gmail.com" &&
-  //   !userEmailAddresses.includes("admin@gmail.com")
-  // ) {
-  //   redirect("/403");
-  // }
 
   // ✅ Extract unique values for filter dropdowns
   const extractFilterOptions = useCallback((parcelList: ParcelData[]) => {
@@ -161,7 +138,7 @@ export default function GuardDashboardPage() {
       // Apply date range filter
       if (filterOptions.dateRange) {
         const now = new Date();
-        let cutoffDate = new Date();
+        const cutoffDate = new Date();
 
         switch (filterOptions.dateRange) {
           case "today":
@@ -220,45 +197,6 @@ export default function GuardDashboardPage() {
     },
     []
   );
-
-  // ✅ Handle search input changes
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchQuery(value);
-
-    const filtered = applyFiltersAndSearch(allParcels, value, filters);
-    setFilteredParcels(filtered);
-  };
-
-  // ✅ Handle filter changes
-  const handleFilterChange = (
-    filterKey: keyof FilterOptions,
-    value: string | "asc" | "desc"
-  ) => {
-    const newFilters = { ...filters, [filterKey]: value };
-    setFilters(newFilters);
-
-    const filtered = applyFiltersAndSearch(allParcels, searchQuery, newFilters);
-    setFilteredParcels(filtered);
-  };
-
-  // ✅ Clear all filters and search
-  const clearAllFilters = () => {
-    const clearedFilters: FilterOptions = {
-      status: "PENDING",
-      block: "",
-      courier: "",
-      dateRange: "",
-      sortBy: "createdAt",
-      sortOrder: "desc",
-    };
-
-    setFilters(clearedFilters);
-    setSearchQuery("");
-
-    const filtered = applyFiltersAndSearch(allParcels, "", clearedFilters);
-    setFilteredParcels(filtered);
-  };
 
   // ✅ Fetch ALL parcels
   const fetchParcels = useCallback(async () => {
@@ -359,56 +297,129 @@ export default function GuardDashboardPage() {
     extractFilterOptions,
   ]);
 
+  // ✅ Handle search input changes
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setSearchQuery(value);
+
+      const filtered = applyFiltersAndSearch(allParcels, value, filters);
+      setFilteredParcels(filtered);
+    },
+    [allParcels, filters, applyFiltersAndSearch]
+  );
+
+  // ✅ Handle filter changes
+  const handleFilterChange = useCallback(
+    (filterKey: keyof FilterOptions, value: string | "asc" | "desc") => {
+      const newFilters = { ...filters, [filterKey]: value };
+      setFilters(newFilters);
+
+      const filtered = applyFiltersAndSearch(
+        allParcels,
+        searchQuery,
+        newFilters
+      );
+      setFilteredParcels(filtered);
+    },
+    [allParcels, searchQuery, filters, applyFiltersAndSearch]
+  );
+
+  // ✅ Clear all filters and search
+  const clearAllFilters = useCallback(() => {
+    const clearedFilters: FilterOptions = {
+      status: "PENDING",
+      block: "",
+      courier: "",
+      dateRange: "",
+      sortBy: "createdAt",
+      sortOrder: "desc",
+    };
+
+    setFilters(clearedFilters);
+    setSearchQuery("");
+
+    const filtered = applyFiltersAndSearch(allParcels, "", clearedFilters);
+    setFilteredParcels(filtered);
+  }, [allParcels, applyFiltersAndSearch]);
+
+  // ✅ Handle parcel pickup verification
+  const handleMarkAsPickedUp = useCallback(
+    async (parcelId: number) => {
+      try {
+        const response = await fetch(
+          `${baseUrl}/parcels/${parcelId}/picked-up/`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log("Parcel marked as picked up:", result);
+
+        // Refresh the parcels list
+        fetchParcels();
+
+        alert("✅ Parcel marked as picked up successfully!");
+      } catch (err) {
+        console.error("Error marking parcel as picked up:", err);
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Failed to mark parcel as picked up";
+        alert(`❌ Error: ${errorMessage}`);
+      }
+    },
+    [baseUrl, fetchParcels]
+  );
+
+  // ✅ Handle new parcel registration
+  const handleParcelAdded = useCallback(() => {
+    console.log("New parcel added, refreshing list...");
+    fetchParcels();
+  }, [fetchParcels]);
+
+  // ✅ Toggle form visibility
+  const toggleRegistrationForm = useCallback(() => {
+    setShowRegistrationForm(!showRegistrationForm);
+  }, [showRegistrationForm]);
+
+  // ✅ useEffect hook
   useEffect(() => {
     if (isLoaded) {
       fetchParcels();
     }
   }, [isLoaded, fetchParcels]);
 
-  // ✅ Handle parcel pickup verification
-  const handleMarkAsPickedUp = async (parcelId: number) => {
-    try {
-      const response = await fetch(
-        `${baseUrl}/parcels/${parcelId}/picked-up/`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+  // ✅ NOW all hooks are declared - conditional rendering can happen here
+  if (!isLoaded) {
+    return <LoadingSpinner />;
+  }
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+  if (!user) {
+    return <LoadingSpinner />;
+  }
 
-      const result = await response.json();
-      console.log("Parcel marked as picked up:", result);
+  // Email authorization check
+  const userPrimaryEmail = user.primaryEmailAddress?.emailAddress;
+  const userEmailAddresses = user.emailAddresses.map(
+    (email) => email.emailAddress
+  );
 
-      // Refresh the parcels list
-      fetchParcels();
-
-      alert("✅ Parcel marked as picked up successfully!");
-    } catch (err) {
-      console.error("Error marking parcel as picked up:", err);
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : "Failed to mark parcel as picked up";
-      alert(`❌ Error: ${errorMessage}`);
-    }
-  };
-
-  // ✅ Handle new parcel registration
-  const handleParcelAdded = () => {
-    console.log("New parcel added, refreshing list...");
-    fetchParcels();
-  };
-
-  // ✅ Toggle form visibility
-  const toggleRegistrationForm = () => {
-    setShowRegistrationForm(!showRegistrationForm);
-  };
+  // Uncomment if you want to restrict access
+  // if (
+  //   userPrimaryEmail !== "admin@gmail.com" &&
+  //   !userEmailAddresses.includes("admin@gmail.com")
+  // ) {
+  //   redirect("/403");
+  // }
 
   // Rest of your component JSX remains the same...
   return (

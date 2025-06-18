@@ -21,6 +21,7 @@ pycparser==2.22
 PySocks==1.7.1
 python-decouple==3.8
 python-dotenv==1.1.0
+qrcode==8.2
 requests==2.32.4
 requests-file==2.1.0
 setuptools==80.9.0

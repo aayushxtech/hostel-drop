@@ -1,6 +1,6 @@
 # HostelDrop
 
-A full-stack web application built with Next.js frontend and Django backend for hostel parcel management system with image upload and email notification capabilities.
+A full-stack web application built with Next.js frontend and Django backend for hostel parcel management system with QR code verification, image upload, and email notification capabilities.
 
 ## 🏗️ Project Structure
 
@@ -8,20 +8,22 @@ A full-stack web application built with Next.js frontend and Django backend for 
 HostelDrop/
 ├── frontend/          # Next.js 15 with TypeScript
 │   ├── app/          # App Router pages
-│   │   ├── guard-dashboard/    # Guard dashboard for parcel management
-│   │   ├── student-dashboard/  # Student parcel viewing dashboard
+│   │   ├── guard-dashboard/    # Guard dashboard with QR scanning
+│   │   ├── student-dashboard/  # Student parcel viewing with QR codes
 │   │   └── dashboard/          # General staff dashboard
 │   ├── components/   # Reusable UI components
-│   │   ├── ParcelRegistrationForm.tsx  # New parcel registration with image upload
+│   │   ├── ParcelRegistrationForm.tsx  # Parcel registration with image upload
 │   │   ├── ParcelCard.tsx             # Individual parcel display
-│   │   ├── ParcelList.tsx             # Parcel listing component
+│   │   ├── ParcelList.tsx             # Parcel listing with QR display
+│   │   ├── QRScanner.tsx              # QR code scanner component
 │   │   └── UpdateProfile.tsx           # Student profile management
 │   └── lib/         # Utility functions
 │       ├── useSyncClerkUser.ts        # Clerk user sync hook
 │       └── sendMail.ts                # Email notification service
 └── backend/          # Django REST API
     ├── students/    # Student management app
-    ├── parcels/     # Parcel management app with image handling
+    ├── parcels/     # Parcel management app with QR system
+    ├── utils/       # QR code generation utilities
     └── backend/     # Django project configuration
 ```
 
@@ -32,6 +34,7 @@ HostelDrop/
 - **TypeScript** - Type safety
 - **Tailwind CSS v4** - Styling with custom theme
 - **Clerk** - Authentication and user management
+- **html5-qrcode** - QR code scanning functionality
 - **Lucide React** - Icon library
 - **React Hooks** - State management with advanced filtering
 
@@ -41,7 +44,8 @@ HostelDrop/
 - **PostgreSQL** - Database (Neon cloud)
 - **Django CORS Headers** - Cross-origin requests
 - **Cloudinary** - Image storage and processing
-- **Django Email Backend** - Email notification system
+- **qrcode** - QR code generation
+- **Django Signing** - Secure token generation
 - **MultiPartParser** - File upload handling
 
 ### Third-Party Services
@@ -73,7 +77,7 @@ cd hostel-drop
 # Navigate to frontend directory
 cd frontend
 
-# Install dependencies
+# Install dependencies (including QR code libraries)
 npm install
 # or
 yarn install
@@ -109,9 +113,8 @@ venv\Scripts\activate
 # On macOS/Linux:
 source venv/bin/activate
 
-# Install dependencies (including new packages)
+# Install dependencies (including QR code libraries)
 pip install -r requirements.txt
-pip install cloudinary django-cloudinary-storage
 
 # Create environment file
 cp .env.example .env
@@ -170,6 +173,8 @@ This project uses:
 - **Lucide React** for icons
 - **Advanced Filter System** with real-time search and sorting
 - **Image Upload Preview** with drag-and-drop support
+- **QR Code Display** with show/hide functionality
+- **Camera Integration** for QR code scanning
 - **Loading States** and progress indicators
 
 Component styling can be found in [`frontend/app/globals.css`](frontend/app/globals.css).
@@ -178,24 +183,27 @@ Component styling can be found in [`frontend/app/globals.css`](frontend/app/glob
 
 ### Frontend
 - [`app/page.tsx`](frontend/app/page.tsx) - Main landing page with navigation
-- [`app/guard-dashboard/page.tsx`](frontend/app/guard-dashboard/page.tsx) - **NEW** Guard dashboard with advanced filtering
-- [`app/student-dashboard/page.tsx`](frontend/app/student-dashboard/page.tsx) - Student parcel view
+- [`app/guard-dashboard/page.tsx`](frontend/app/guard-dashboard/page.tsx) - **UPDATED** Guard dashboard with QR scanning
+- [`app/student-dashboard/page.tsx`](frontend/app/student-dashboard/page.tsx) - **UPDATED** Student dashboard with QR codes
 - [`app/dashboard/page.tsx`](frontend/app/dashboard/page.tsx) - General staff dashboard
-- [`components/ParcelRegistrationForm.tsx`](frontend/components/ParcelRegistrationForm.tsx) - **NEW** Parcel registration with image upload
+- [`components/ParcelRegistrationForm.tsx`](frontend/components/ParcelRegistrationForm.tsx) - Parcel registration with image upload
 - [`components/UpdateProfile.tsx`](frontend/components/UpdateProfile.tsx) - Student profile management
 - [`components/ParcelCard.tsx`](frontend/components/ParcelCard.tsx) - **NEW** Individual parcel display component
-- [`components/ParcelList.tsx`](frontend/components/ParcelList.tsx) - **NEW** Parcel listing with filtering
+- [`components/ParcelList.tsx`](frontend/components/ParcelList.tsx) - **UPDATED** Parcel listing with QR display
+- [`components/QRScanner.tsx`](frontend/components/QRScanner.tsx) - **NEW** QR code scanner component
 - [`lib/useSyncClerkUser.ts`](frontend/lib/useSyncClerkUser.ts) - Clerk user sync hook
-- [`lib/sendMail.ts`](frontend/lib/sendMail.ts) - **NEW** Email notification service
+- [`lib/sendMail.ts`](frontend/lib/sendMail.ts) - Email notification service
 - [`app/globals.css`](frontend/app/globals.css) - Global styles and theme variables
 
 ### Backend
 - [`students/models.py`](backend/students/models.py) - Student data model
-- [`parcels/models.py`](backend/parcels/models.py) - **UPDATED** Parcel model with CloudinaryField
+- [`parcels/models.py`](backend/parcels/models.py) - Parcel model with CloudinaryField
 - [`students/views.py`](backend/students/views.py) - Student API endpoints
-- [`parcels/views.py`](backend/parcels/views.py) - **UPDATED** Parcel endpoints with image upload
-- [`parcels/serializers.py`](backend/parcels/serializers.py) - **NEW** Parcel serialization with image handling
-- [`backend/settings.py`](backend/backend/settings.py) - **UPDATED** Django config with Cloudinary
+- [`parcels/views.py`](backend/parcels/views.py) - **UPDATED** Parcel endpoints with QR system
+- [`parcels/urls.py`](backend/parcels/urls.py) - **UPDATED** URL routing with QR endpoints
+- [`parcels/serializers.py`](backend/parcels/serializers.py) - Parcel serialization with image handling
+- [`utils/qr.py`](backend/utils/qr.py) - **NEW** QR code generation and verification utilities
+- [`backend/settings.py`](backend/backend/settings.py) - Django config with Cloudinary
 - [`backend/urls.py`](backend/backend/urls.py) - URL routing
 
 ## 🔄 Development Workflow
@@ -235,6 +243,8 @@ The backend is configured to allow requests from `http://localhost:3000` (fronte
 
 > ⚠️ **Email Service**: Email notifications use Resend. Monitor sending limits and deliverability.
 
+> ⚠️ **Camera Permissions**: QR scanning requires camera access. Ensure HTTPS in production for camera permissions.
+
 ### Common Issues
 
 1. **Port conflicts**: Ensure ports 3000 (frontend) and 8000 (backend) are available
@@ -246,6 +256,8 @@ The backend is configured to allow requests from `http://localhost:3000` (fronte
 7. **Image upload failures**: Verify Cloudinary credentials and network connectivity
 8. **Email sending failures**: Check Resend API key and domain verification
 9. **Hook order errors**: Ensure all React hooks are called at component top level
+10. **Camera access denied**: Enable camera permissions in browser settings
+11. **QR code scanning issues**: Ensure good lighting and stable camera positioning
 
 ## 📦 Current Application Workflow
 
@@ -259,24 +271,25 @@ User signs up/in via Clerk → Role detection → Dashboard routing → Profile 
 - **Required Fields**: Name, Email, Phone, Hostel Block, Room Number
 - **Profile Status**: Displays completion status with visual indicators
 
-### 2. **Guard Dashboard Experience (Enhanced)**
+### 2. **Guard Dashboard Experience (Enhanced with QR Scanning)**
 ```
-Guard logs in → Access advanced dashboard → Register parcels with images → Send notifications → Manage pickups
+Guard logs in → Access dashboard → Register parcels → Scan QR codes → Verify pickups
 ```
-- **Dashboard**: [`app/guard-dashboard/page.tsx`](frontend/app/guard-dashboard/page.tsx) - **NEW ENHANCED VERSION**
-- **Advanced Features**:
+- **Dashboard**: [`app/guard-dashboard/page.tsx`](frontend/app/guard-dashboard/page.tsx) - **UPDATED WITH QR SCANNING**
+- **Enhanced Features**:
   - **Real-time Statistics**: Total parcels, pending pickups, daily completed
   - **Advanced Filtering System**: Status, block, courier, date range, sorting
   - **Parcel Registration**: [`ParcelRegistrationForm.tsx`](frontend/components/ParcelRegistrationForm.tsx) with image upload
-  - **Image Upload**: Cloudinary integration with preview and progress tracking
+  - **QR Code Scanning**: [`QRScanner.tsx`](frontend/components/QRScanner.tsx) for pickup verification
+  - **Camera Integration**: Real-time QR code detection and processing
+  - **Secure Verification**: Token-based QR code validation
   - **Email Notifications**: Automatic email alerts to students via Resend
   - **Search Functionality**: Multi-field real-time search
-  - **Pickup Management**: One-click status updates with confirmation
 
-### 3. **Parcel Registration Workflow (New)**
+### 3. **Parcel Registration Workflow (Enhanced)**
 
 ```registeration
-Guard selects student → Fills details → Uploads image → Submits → Email sent → Tracking ID generated
+Guard selects student → Fills details → Uploads image → Submits → QR generated → Email sent → Tracking ID created
 ```
 
 - **Component**: [`ParcelRegistrationForm.tsx`](frontend/components/ParcelRegistrationForm.tsx)
@@ -286,23 +299,40 @@ Guard selects student → Fills details → Uploads image → Submits → Email 
   - **Image Upload**: Drag & drop or click to upload with preview
   - **File Validation**: Size (5MB) and type (JPEG, PNG, WebP) validation
   - **Upload Progress**: Real-time progress bar during upload
-  - **Email Integration**: Automatic notification with parcel details
+  - **QR Code Generation**: Automatic secure QR code creation
+  - **Email Integration**: Automatic notification with parcel details and QR code
   - **Error Handling**: Comprehensive error messages and recovery
 
-### 4. **Student Dashboard Experience (Updated)**
+### 4. **Student Dashboard Experience (Updated with QR Codes)**
 
 ```dashboard
-Student logs in → Views personalized dashboard → Sees parcel history → Profile management
+Student logs in → Views dashboard → Sees QR codes → Downloads/displays QR → Profile management
 ```
 
-- **Dashboard**: [`app/student-dashboard/page.tsx`](frontend/app/student-dashboard/page.tsx)
+- **Dashboard**: [`app/student-dashboard/page.tsx`](frontend/app/student-dashboard/page.tsx) - **UPDATED WITH QR DISPLAY**
 - **Features**:
   - **Profile Status Indicator**: Completion percentage and missing fields
   - **Parcel History**: Personal parcel tracking with images
+  - **QR Code Display**: [`ParcelList.tsx`](frontend/components/ParcelList.tsx) with show/hide QR functionality
+  - **QR Code Download**: Direct PNG download for offline use
   - **Status Tracking**: Real-time parcel status updates
   - **Profile Editing**: In-place profile updates
 
-### 5. **Image Management System (New)**
+### 5. **QR Code System (New)**
+
+```qr-workflow
+Parcel created → QR token signed → QR image generated → Student displays QR → Guard scans → Token verified → Parcel marked picked up
+```
+
+- **Generation**: On-demand QR code creation with signed tokens
+- **Security**: Django `TimestampSigner` for tamper-proof QR codes
+- **Expiration**: QR codes automatically expire after 48 hours
+- **Formats**: Both PNG image and Base64 encoded for web display
+- **Verification**: Real-time QR scanning with camera integration
+- **Caching**: QR images cached for 24 hours for performance
+- **Error Handling**: Expired, tampered, and already-picked-up validations
+
+### 6. **Image Management System**
 
 ```image-selection
 Image selected → Client validation → Cloudinary upload → URL stored → Display with fallback
@@ -314,7 +344,7 @@ Image selected → Client validation → Cloudinary upload → URL stored → Di
 - **Display**: Thumbnail view with click-to-expand functionality
 - **Error Handling**: Graceful fallback for failed image loads
 
-### 6. **Email Notification System (New)**
+### 7. **Email Notification System**
 
 ```email
 Parcel registered → Email template generated → Resend API → Student notified → Status tracked
@@ -325,7 +355,7 @@ Parcel registered → Email template generated → Resend API → Student notifi
 - **Tracking**: Email delivery status monitoring
 - **Error Recovery**: Fallback handling for email failures
 
-### 7. **Advanced Search & Filter System (Enhanced)**
+### 8. **Advanced Search & Filter System**
 
 ```search
 User enters criteria → Multi-field filtering → Real-time results → Export functionality
@@ -341,15 +371,16 @@ User enters criteria → Multi-field filtering → Real-time results → Export 
 - **Search Fields**: Student name, tracking ID, courier, room number, block
 - **Performance**: Debounced search with client-side filtering
 
-### 8. **Data Flow Architecture (Updated)**
+### 9. **Data Flow Architecture (Updated)**
 
 ```
-Frontend (React/Next.js) ↔ Clerk Auth ↔ Backend (Django + Cloudinary + Resend) ↔ PostgreSQL Database
+Frontend (React/Next.js) ↔ Clerk Auth ↔ Backend (Django + QR System + Cloudinary + Resend) ↔ PostgreSQL Database
 ```
 
 - **Authentication**: Clerk handles user auth, syncs with Django backend
 - **Data Sync**: [`useSyncClerkUser.ts`](frontend/lib/useSyncClerkUser.ts) manages user synchronization
 - **API Communication**: RESTful APIs with multipart support for file uploads
+- **QR System**: Secure token-based QR generation and verification
 - **Database**: PostgreSQL with proper indexing and relationships
 - **Image Storage**: Cloudinary CDN for optimized image delivery
 - **Email Service**: Resend for reliable email delivery
@@ -409,7 +440,7 @@ Frontend (React/Next.js) ↔ Clerk Auth ↔ Backend (Django + Cloudinary + Resen
 - **Response**: List of all students (admin view)
 - **Use Case**: Staff/admin overview and parcel registration dropdown
 
-### Parcel Endpoints (`/parcels/`) - **UPDATED**
+### Parcel Endpoints (`/parcels/`) - **UPDATED WITH QR SYSTEM**
 
 #### `POST /parcels/create/`
 
@@ -426,8 +457,8 @@ Frontend (React/Next.js) ↔ Clerk Auth ↔ Backend (Django + Cloudinary + Resen
     "image": "file_upload"
   }
   ```
-- **Response**: Created parcel details with tracking ID and image URL
-- **Features**: Cloudinary image upload, automatic email notification
+- **Response**: Created parcel details with tracking ID, image URL, and QR URLs
+- **Features**: Cloudinary image upload, automatic QR generation, email notification
 - **Use Case**: Guard registers incoming parcel with photo
 
 #### `GET /parcels/my/?clerk_id={clerk_id}`
@@ -435,30 +466,95 @@ Frontend (React/Next.js) ↔ Clerk Auth ↔ Backend (Django + Cloudinary + Resen
 - **Purpose**: Get all parcels for a specific student
 - **Method**: GET
 - **Query Params**: `clerk_id` (student's clerk ID)
-- **Response**: List of parcels belonging to the student with image URLs
-- **Use Case**: Student views their pending/picked up parcels
+- **Response**: List of parcels belonging to the student with image URLs and QR URLs
+- **Use Case**: Student views their pending/picked up parcels with QR codes
 
 #### `GET /parcels/all/`
 
 - **Purpose**: Retrieve all parcels in the system
 - **Method**: GET
-- **Response**: Complete list of all parcels with status and images
-- **Features**: Full student details, image URLs, timestamps
+- **Response**: Complete list of all parcels with status, images, and QR URLs
+- **Features**: Full student details, image URLs, timestamps, QR code URLs
 - **Use Case**: Guard dashboard with filtering and search
 
 #### `PATCH /parcels/{parcel_id}/picked-up/`
 
-- **Purpose**: Mark parcel as picked up by student
+- **Purpose**: Mark parcel as picked up by student (legacy endpoint)
 - **Method**: PATCH
 - **URL Params**: `parcel_id` (ID of the parcel)
 - **Response**: Updated parcel with pickup timestamp
-- **Use Case**: Guard marks parcel as collected when handing over to student
+- **Use Case**: Manual parcel pickup marking (fallback)
+
+### QR Code Endpoints (`/parcels/qr/`) - **NEW**
+
+#### `GET /parcels/qr/{parcel_id}/`
+
+- **Purpose**: Generate and return QR code as PNG image
+- **Method**: GET
+- **URL Params**: `parcel_id` (ID of the parcel)
+- **Response**: PNG image (binary)
+- **Features**: On-demand generation, 24-hour caching, 48-hour token expiry
+- **Use Case**: Direct QR code image download/display
+
+#### `GET /parcels/qr/{parcel_id}/base64/`
+
+- **Purpose**: Get QR code as Base64 encoded JSON response
+- **Method**: GET
+- **URL Params**: `parcel_id` (ID of the parcel)
+- **Response**: 
+  ```json
+  {
+    "parcel_id": 123,
+    "tracking_id": "HD000123",
+    "qr_code": "data:image/png;base64,iVBORw0KGgo...",
+    "expires_in_hours": 48,
+    "student_info": {
+      "name": "John Doe",
+      "room": "101",
+      "block": "A"
+    }
+  }
+  ```
+- **Use Case**: Web/mobile QR code display
+
+#### `POST /parcels/verify-qr/`
+
+- **Purpose**: Verify scanned QR token and mark parcel as picked up
+- **Method**: POST
+- **Body**:
+  ```json
+  {
+    "token": "signed_qr_token_from_scan"
+  }
+  ```
+- **Response**: 
+  ```json
+  {
+    "valid": true,
+    "message": "Parcel successfully picked up!",
+    "parcel": {
+      "id": 123,
+      "tracking_id": "HD000123",
+      "student_name": "John Doe",
+      "student_room": "101",
+      "student_block": "A",
+      "picked_up_at": "2024-01-15T10:30:00Z",
+      "description": "Package details",
+      "service": "Amazon"
+    }
+  }
+  ```
+- **Error Responses**:
+  - `410 Gone` - QR code expired
+  - `409 Conflict` - Parcel already picked up
+  - `400 Bad Request` - Invalid/tampered QR code
+- **Use Case**: QR scanner verification and automatic pickup marking
 
 ### API Response Structure (Updated)
 
 All endpoints follow a consistent response format:
 
-**Success Response (Parcel Creation):**
+**Success Response (Parcel Creation with QR):**
 ```json
 {
   "parcel": {
@@ -476,7 +572,9 @@ All endpoints follow a consistent response format:
     "created_at": "2024-01-15T10:30:00Z"
   },
   "created": true,
-  "message": "Parcel created successfully with tracking ID: HD000123"
+  "message": "Parcel created successfully with tracking ID: HD000123",
+  "qr_url": "/parcels/qr/123/",
+  "qr_base64_url": "/parcels/qr/123/base64/"
 }
 ```
 
@@ -494,6 +592,8 @@ All endpoints follow a consistent response format:
 - `201 Created` - Successful POST operations (parcel creation)
 - `400 Bad Request` - Invalid request data or validation errors
 - `404 Not Found` - Resource not found
+- `409 Conflict` - Parcel already picked up (QR verification)
+- `410 Gone` - QR code expired
 - `413 Payload Too Large` - Image file too large
 - `415 Unsupported Media Type` - Invalid image format
 - `500 Internal Server Error` - Server-side errors
@@ -507,12 +607,16 @@ All endpoints follow a consistent response format:
 3. **Advanced Parcel Management** - Registration, tracking, status updates
 4. **Image Upload System** - Cloudinary integration with preview and validation
 5. **Email Notification System** - Automatic student notifications via Resend
-6. **Advanced Search & Filter** - Multi-criteria filtering with real-time results
-7. **Responsive Design** - Mobile-first approach with Tailwind CSS
-8. **Database Integration** - PostgreSQL with proper indexing and relationships
-9. **Error Handling** - Comprehensive error management and user feedback
-10. **Loading States** - Progress indicators and loading spinners
-11. **File Management** - Upload progress tracking and error recovery
+6. **QR Code System** - Secure QR generation, scanning, and verification
+7. **Camera Integration** - Real-time QR code scanning with html5-qrcode
+8. **Token-Based Security** - Signed QR tokens with expiration
+9. **Advanced Search & Filter** - Multi-criteria filtering with real-time results
+10. **Responsive Design** - Mobile-first approach with Tailwind CSS
+11. **Database Integration** - PostgreSQL with proper indexing and relationships
+12. **Error Handling** - Comprehensive error management and user feedback
+13. **Loading States** - Progress indicators and loading spinners
+14. **File Management** - Upload progress tracking and error recovery
+15. **Caching System** - QR code caching for improved performance
 
 ### 🔄 In Progress
 
@@ -520,7 +624,7 @@ All endpoints follow a consistent response format:
 2. **Bulk Operations** - Mass parcel import/export functionality
 3. **Mobile App** - React Native companion app
 4. **Push Notifications** - Real-time browser notifications
-5. **QR Code System** - QR codes for pickup verification
+5. **Offline QR Support** - Offline QR code download
 
 ### 📋 Future Enhancements
 
@@ -534,6 +638,19 @@ All endpoints follow a consistent response format:
 3. **CORS Configuration** - Controlled cross-origin requests
 4. **Environment Variables** - Secure credential management
 5. **Input Sanitization** - XSS and injection prevention
-6. **Rate Limiting** - API abuse prevention (planned)
+6. **QR Token Security** - Cryptographically signed tokens with expiration
+7. **Camera Permission Handling** - Secure camera access management
+8. **Rate Limiting** - API abuse prevention (planned)
 
-This comprehensive workflow ensures efficient parcel management while maintaining a user-friendly experience for both guards and students, with robust image handling and automated notification systems.
+### 📱 QR Code System Features
+
+1. **On-Demand Generation** - QR codes generated when requested, not stored
+2. **Secure Tokens** - Django TimestampSigner for tamper-proof codes
+3. **Auto-Expiration** - 48-hour automatic expiry for security
+4. **Multiple Formats** - PNG images and Base64 JSON responses
+5. **Caching** - 24-hour image caching for performance
+6. **Real-Time Scanning** - Camera-based QR code detection
+7. **Verification System** - Secure token validation with detailed error handling
+8. **Mobile Optimized** - Works on both desktop and mobile devices
+
+This comprehensive system ensures efficient parcel management with secure QR code verification, maintaining a user-friendly experience for both guards and students while providing robust security and performance optimizations.

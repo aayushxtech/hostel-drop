@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 
 interface HelpRequest {
   id: number;
@@ -22,6 +22,46 @@ const HelpRequestList: React.FC<HelpRequestListProps> = ({
   loading,
   onRefresh,
 }) => {
+  const [selectedStatus, setSelectedStatus] = useState<
+    "pending" | "in_progress" | "resolved"
+  >("pending");
+
+  const updateStatus = async (id: number, status: string) => {
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/support/update/${id}/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status }),
+      });
+
+      if (res.ok) {
+        onRefresh(); // Refresh after status update
+      }
+    } catch (error) {
+      console.error(`Error updating to ${status}:`, error);
+    }
+  };
+
+  const handleDeleteRequest = async (id: number) => {
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/support/delete/${id}/`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        onRefresh(); // Refresh after deleting
+      }
+    } catch (error) {
+      console.error("Error deleting request:", error);
+    }
+  };
+
+  const filteredRequests = helpRequests.filter(
+    (req) => req.status === selectedStatus
+  );
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex justify-between items-center mb-4">
@@ -35,13 +75,31 @@ const HelpRequestList: React.FC<HelpRequestListProps> = ({
         </button>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-2 mb-4">
+        {["pending", "in_progress", "resolved"].map((status) => (
+          <button
+            key={status}
+            onClick={() => setSelectedStatus(status as any)}
+            className={`px-3 py-1 rounded-full text-sm font-semibold ${
+              selectedStatus === status
+                ? "bg-blue-500 text-white"
+                : "bg-gray-100 text-gray-700"
+            }`}
+          >
+            {status.replace("_", " ").toUpperCase()}
+          </button>
+        ))}
+      </div>
+
+      {/* Requests */}
       {loading ? (
         <p className="text-center py-4">Loading help requests...</p>
-      ) : helpRequests.length === 0 ? (
-        <p className="text-center py-4">No help requests submitted yet.</p>
+      ) : filteredRequests.length === 0 ? (
+        <p className="text-center py-4">No {selectedStatus} requests found.</p>
       ) : (
         <div className="space-y-4">
-          {helpRequests.map((req) => (
+          {filteredRequests.map((req) => (
             <div
               key={req.id}
               className="border border-gray-300 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition"
@@ -74,17 +132,50 @@ const HelpRequestList: React.FC<HelpRequestListProps> = ({
                   </p>
                 </div>
 
-                <span
-                  className={`text-xs font-bold px-3 py-1 rounded-full self-start sm:self-auto ${
-                    req.status === "resolved"
-                      ? "bg-green-100 text-green-800"
-                      : req.status === "in_progress"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-red-100 text-red-700"
-                  }`}
-                >
-                  {req.status.replace("_", " ").toUpperCase()}
-                </span>
+                <div className="flex flex-col items-end gap-2">
+                  <span
+                    className={`text-xs font-bold px-3 py-1 rounded-full ${
+                      req.status === "resolved"
+                        ? "bg-green-100 text-green-800"
+                        : req.status === "in_progress"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {req.status.replace("_", " ").toUpperCase()}
+                  </span>
+
+                  {/* Mark as In Progress */}
+                  {req.status === "pending" && (
+                    <button
+                      onClick={() => updateStatus(req.id, "in_progress")}
+                      className="bg-yellow-500 text-white px-2 py-1 text-xs rounded hover:bg-yellow-600 transition"
+                    >
+                      📌 Mark as In Progress
+                    </button>
+                  )}
+
+                  {/* Mark Resolved */}
+                  {(req.status === "pending" ||
+                    req.status === "in_progress") && (
+                    <button
+                      onClick={() => updateStatus(req.id, "resolved")}
+                      className="bg-green-500 text-white px-2 py-1 text-xs rounded hover:bg-green-600 transition"
+                    >
+                      ✅ Mark as Resolved
+                    </button>
+                  )}
+
+                  {/* Delete */}
+                  {req.status === "resolved" && (
+                    <button
+                      onClick={() => handleDeleteRequest(req.id)}
+                      className="text-red-500 text-xs hover:underline"
+                    >
+                      🗑️ Delete
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}

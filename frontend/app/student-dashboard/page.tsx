@@ -213,7 +213,11 @@ export default function StudentDashboardPage() {
               ) : filteredParcels.length === 0 ? (
                 <p className="text-center py-4">No parcels in this category.</p>
               ) : (
-                <ParcelList parcels={filteredParcels} showStudentName={false} />
+                <ParcelList
+                  parcels={filteredParcels}
+                  showStudentName={false}
+                  showQRCodes={true} // ✅ Enable QR codes for students
+                />
               )}
             </div>
           )}

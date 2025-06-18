@@ -47,3 +47,27 @@ def get_my_help_requests(request):
     help_requests = HelpRequest.objects.filter(student=student)
     serializer = HelpRequestSerializer(help_requests, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['PATCH'])
+
+def update_help_request(request, pk):
+    try:
+        help_request = HelpRequest.objects.get(pk=pk)
+    except HelpRequest.DoesNotExist:
+        return Response({"error": "Help request not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = HelpRequestSerializer(help_request, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+def delete_help_request(request, pk):
+    try:
+        help_request = HelpRequest.objects.get(pk=pk)
+    except HelpRequest.DoesNotExist:
+        return Response({"error": "Help request not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    help_request.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)

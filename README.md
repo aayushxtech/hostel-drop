@@ -50,7 +50,7 @@ HostelDrop/
 
 ### Third-Party Services
 - **Cloudinary** - Image hosting and transformation
-- **Resend** - Email delivery service
+- **EmailJS** - Email delivery service
 - **Neon** - PostgreSQL cloud database
 
 ## 📋 Prerequisites
